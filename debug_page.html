@@ -1,0 +1,275 @@
+<!--
++-------------------------------------+
+Project:    ASRS Workbench
+            NASA
++-------------------------------------+
+-->
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" >
+<HTML>
+	<HEAD>
+		<title>ASRS Database Online - Query Filter</title> 
+		<LINK REL='STYLESHEET' TYPE='text/css' HREF='MainStylesLite.css'>
+		<script src="baseScript.js"></script>
+        <script language="javascript">
+        var valuePopup;
+        
+        function closePopup()
+        {
+            if(valuePopup && !valuePopup.closed)
+            {
+                valuePopup.close();
+            }
+        }
+
+        function openPopup(link)
+        {
+            valuePopup = window.open(link, "valueSelectPopup","scrollBars=yes,resizable=yes,width=500,height=600,toolbar=no,menubar=no,location=no,directories=no", true);
+        }
+
+		</script>
+		<meta content="Microsoft Visual Studio 7.0" name="GENERATOR">
+		<meta content="C#" name="CODE_LANGUAGE">
+		<meta content="JavaScript" name="vs_defaultClientScript">
+		<meta content="http://schemas.microsoft.com/intellisense/ie5" name="vs_targetSchema">
+	<script id="_fed_an_js_tag" type="text/javascript" src="scripts/federated-analytics.all.min.js?agency=NASA&sub-agency=ARC&vcto=12"></script>
+	</HEAD>
+	<body topMargin="5" onLoad="openInstruction()" onUnload="closePopup()">
+		<form name="QueryWizard" method="post" action="./QueryWizard_Filter.aspx" id="QueryWizard">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUJMTg5MzQ0ODQzD2QWAgICD2QWBAIBD2QWAmYPZBYCZg8PFgIeBFRleHQFrgE8aW1nIHNyYz0naW1hZ2VzL1F1ZXJ5V2l6YXJkU3RlcHNfQmVnaW5fT24ucG5nJyBib3JkZXI9MD48aW1nIHNyYz0naW1hZ2VzL1F1ZXJ5V2l6YXJkU3RlcHNfUmVzdWx0c19PZmYucG5nJyBib3JkZXI9MD48aW1nIHNyYz0naW1hZ2VzL1F1ZXJ5V2l6YXJkU3RlcHNfVmlld19PZmYucG5nJyBib3JkZXI9MD5kZAIFD2QWBGYPDxYCHwBlZGQCAQ9kFgRmDw8WAh4LTmF2aWdhdGVVcmwFVy9BU1JTREJPbmxpbmUvQ29udGFjdFN1cHBvcnQuYXNweD93Yl9yZWZlcnJlcj0lMmZBU1JTREJPbmxpbmUlMmZRdWVyeVdpemFyZF9GaWx0ZXIuYXNweGRkAgEPDxYCHwEFUi9BU1JTREJPbmxpbmUvQ2hhbmdlTWVudS5hc3A/d2JfcmVmZXJyZXI9JTJmQVNSU0RCT25saW5lJTJmUXVlcnlXaXphcmRfRmlsdGVyLmFzcHhkZBgBBR5fX0NvbnRyb2xzUmVxdWlyZVBvc3RCYWNrS2V5X18WFwUCMjAFATIFAjE2BQIyMQUCMjIFAjE0BQIxNQUCMjMFAjEyBQIxMwUCMTkFAjE3BQIxMQUBMQUBNgUBOAUBNwUBOQUCMTAFAjI1BQIxOAUFX2N0bDUFBV9jdGw27hA2vvR/52n23JxmB7fe9XLAQ4xkSrZHK6zpIVGBJd0=" />
+
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="75B0E3A3" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEdAC0Q0PhyulYQ532Tm4RaGq1KVWqBuhr+qPYmgOuhBMBfBRHO3OCCmcJIqx+BBImw6gyK1Y9C0HdgSU5VGbF/zfE4A48yP7oGZGWdbkcPGXZAe3azR0mntNIZiVbauhMKo2WYqAcVs5QSdwbtCqJ4QZnRCXfHPLJq17NY6OYJM/yZGOf8tq2NGmkF/VRnvyOSgLeiR9wHbla2ePQl9JswnDEknlIUbmEEoZQYsP/kzThtQlAz90kp2eAHk1HgvLPUhF4G0X3I+0O1y0VdjyV6RTPx4vVBwvVy+1WsfCk5n9Wa3Vmt5Q8yTVakHs7BBV9wBZ5mD+ZGI9Q9oxU5rrh2J3UY3NomfaDkuSrCeuB7PUX3N9RFGHpb8H7HosflLskjSMOxjF/YcEsCaMxfUTiV10iOB0fuu2ygJrNbWpMuh8n2FcEpCjGmO2Vxl5nI2HnMTvs7CBOwPqB6pEHnVLP3n6yPHIrH89jyT/WpDgFcsbgvrOTO7gxlW6LnZpdfhxOg3hSXzW1udo1D/f6iTfmUIufdoR+slM7Kw7YLNSJ0wKWuJtIYi7wh1l33Fm0oERW4xXnRTDof0vRmq/Wei36T3H/wprB3FwBzJRPTsirFfPFiWxnPeHY7CZNmRQ7nshKzmB4BRwdkxFrZ74OorGHdcR6vqMYV/A93u8w3uM550q7FuipWLyE8ONqDVNV1Jt26ZwLlQIJo9P+t/xEYlqTEM74eMOhKu7AB3Yp9p3VkpnMRpbv4NU8dQLkyi1mwF7OGu5mIIYUnbD/xz8Mt62jrQAjId3QoQx+AutFng87Bf/yKXkEp1lj8ze4NpB24z536yZvVFzKvVCDEB+wZfZLCH1gYkws9w+GYzxGVpdgZ/WzFJQip3GxYFvuy1Z0hGLeKDlxXM3IBkltAd1hYNKf+G4Q+jM7a6dhRu1jw25dIkrvWeTl+83g/6qskVLftTx/OkxaCpajCScUTZG0jm9F1Pog9uyluslHiU6MIIXQzyneMwQ==" />
+			
+<script>
+	// Popup the help window
+    function HelpWindow(page_name)
+	{
+	    var win = window.open('help.aspx?Doc=' + page_name, 'asrshelp','width=500,height=350,resizable=yes,scrollbars=yes', true);
+	    win.focus();
+	}
+    function openPopupAndSize(link, startWidth, startHeight)
+    {
+        valuePopup = window.open(link, "valueSelectPopup","scrollBars=yes,resizable=yes,width=" + startWidth + ",height=" + startHeight + ",toolbar=no,menubar=no,location=no,directories=no", true);
+    }
+</script>
+<TABLE CLASS='maintext' BORDER='0' CELLSPACING='0' CELLPADDING='0' ALIGN='left'>
+    <!-- Title and Menu, note: the WIDTH tag is only needed for Netscape 4.x -->
+    <TR>
+        <TD CLASS='titletext'>
+            <DIV>
+                <span id="_ctl7_TitleLabel"><img src='images/QueryWizardSteps_Begin_On.png' border=0><img src='images/QueryWizardSteps_Results_Off.png' border=0><img src='images/QueryWizardSteps_View_Off.png' border=0></span>
+            </DIV>
+        </TD>
+        <TD CLASS='sidebar' VALIGN='top'>
+            
+            <DIV>
+                <a href="QueryWizard_StartNewQuery.aspx"><img src="images/LeftArrow.png" id="_ctl7_SearchButtonLink" border="0" width="20" height="16" align="absMiddle" />New Search</a> 
+            </DIV>
+            <DIV>
+                <a href="javascript:HelpWindow('QueryWizard_Filter.aspx')"><img src="images/LeftArrow.png" id="_ctl7_Img2" border="0" width="20" height="16" align="absMiddle" />Help</a> 
+            </DIV>
+            <DIV>
+                <a href="http://asrs.arc.nasa.gov/contact.php"><img src="images/LeftArrow.png" id="_ctl7_Img4" border="0" width="20" height="16" align="absMiddle" /><nobr>Contact Support</nobr></a>
+                <!-- <a href="javascript:openPopupAndSize('ContactSupport.aspx', 700, 600)"><img src="images/LeftArrow.png" id="_ctl7_Img1" border="0" width="20" height="16" align="absMiddle" /><nobr>Contact Support</nobr></a> -->
+            </DIV>
+            <DIV>
+                <nobr><a href="javascript:openPopupAndSize('CodingForm.pdf', 900, 650)"><img src="images/PDF_Icon.png" id="_ctl7_Img3" border="0" width="20" height="16" align="absMiddle" />ASRS Database Items(pdf) </a></nobr>
+            </DIV>
+        </TD>
+    </TR>
+    <TR>
+        <TD CLASS='maintext' COLSPAN='2' VALIGN='top'>
+            <div id="divDescription" class="clDescriptionCont">
+                <!--Empty div-->
+            </div>
+            <script type="text/javascript">setPopup()</script>
+            <!-- BODY TEXT OF THE PAGE -->
+
+			<div id="StartingHelpHeader" style="FONT-SIZE: 10pt; WIDTH: 95%; FONT-FAMILY: arial; HEIGHT: 20px; BACKGROUND-COLOR: #345A86; font-family:Arial, Sans-Serif"
+				 align="left"><STRONG><font color="#ffffff">&nbsp; 
+					How To Search:</font></STRONG></div>
+			<TABLE id="StartingHelp" style="DISPLAY: none; WIDTH: 95%; FONT-FAMILY: Arial, Helvetica, sans-serif; 
+			        border-left-style:solid; border-left-width:thin; border-left-color: #B2B4B6; border-right-width:thin; border-right-style:solid; border-right-color:#B2B4B6"
+				cellSpacing="0" cellPadding="2" width="808" border="0">
+				<TR>
+					<TD style="WIDTH: 74px; height: 20px;" vAlign="bottom"><STRONG>Step 1:</STRONG></TD>
+					<TD vAlign="bottom" style="height: 20px">
+                        Click
+                        <IMG height="15" src="images/plus_button.gif">&nbsp;to add search items. Note: Make sure your Pop-up Blocker is off.</TD>
+				</TR>
+				<TR>
+					<TD style="WIDTH: 74px; height: 28px;" vAlign="top"><STRONG>Step 2:</STRONG></TD>
+					<TD vAlign="top" style="height: 28px">
+                        In "Current Search Items" section, select "Click Here" in a 
+						statement and choose items from lookup window.<br></TD>
+				</TR>
+			</TABLE>
+			<table class="querywizard" cellspacing="0" cellpadding="0" border="0" width="95%">
+	<tr>
+		<td colspan="2"><table cellspacing="0" cellpadding="0" border="0" width="100%">
+			<tr>
+				<td align="left" valign="top" width="50%"><table cellspacing="0" cellpadding="0" border="0" width="100%">
+					<tr>
+						<td class="category" valign="middle" colspan="2"><span id="-100" class="category">&nbsp;Date & Report Number</span></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="20" id="20" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-20" class="statementtext" href="javascript:__doPostBack(&#39;-20&#39;,&#39;&#39;)">&nbsp;<B>Report Number</B> (ACN) was <span class="replaceableText2" name="span20"><a href="javascript:__doPostBack('-20','')" OnMouseOver='popup_exact("Examples","ACN=Accession Number given to an incoming ASRS report (e.g., 634528)",670,130)' onMouseOut='popout()' >[number]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="2" id="2" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-2" class="statementtext" href="javascript:__doPostBack(&#39;-2&#39;,&#39;&#39;)">&nbsp;<B>Date of Incident</B> was between <span class="replaceableText2" name="span2_1"><a href="javascript:__doPostBack('-2','')" OnMouseOver='popup_exact("Examples","Specify month/year date range to search reports.",670,130)' onMouseOut='popout()' >[date]</a></span> and <span class="replaceableText2" name="span2_2"><a href="javascript:__doPostBack('-2','')" OnMouseOver='popup_exact("Examples","Specify month/year date range to search reports.",670,130)' onMouseOut='popout()' >[date]</a></span></a></td>
+					</tr><tr>
+						<td class="category" valign="middle" colspan="2"><span id="-102" class="category">&nbsp;Environment</span></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="16" id="16" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-16" class="statementtext" href="javascript:__doPostBack(&#39;-16&#39;,&#39;&#39;)">&nbsp;<B>Flight Conditions</B> were <span class="replaceableText2" name="span16"><a href="javascript:__doPostBack('-16','')" OnMouseOver='popup_exact("Examples","VMC, IMC, Mixed, Marginal",670,130)' onMouseOut='popout()' >[conditions]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="21" id="21" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-21" class="statementtext" href="javascript:__doPostBack(&#39;-21&#39;,&#39;&#39;)">&nbsp;<B>Lighting</B> was <span class="replaceableText2" name="span21"><a href="javascript:__doPostBack('-21','')" OnMouseOver='popup_exact("Examples","Dawn, Daylight, Dusk, Night",670,130)' onMouseOut='popout()' >[conditions]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="22" id="22" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-22" class="statementtext" href="javascript:__doPostBack(&#39;-22&#39;,&#39;&#39;)">&nbsp;<B>Weather</B> was <span class="replaceableText2" name="span22"><a href="javascript:__doPostBack('-22','')" OnMouseOver='popup_exact("Examples","Fog, Hail, Rain, etc.",670,130)' onMouseOut='popout()' >[element]</a></span></a></td>
+					</tr><tr>
+						<td class="category" valign="middle" colspan="2"><span id="-103" class="category">&nbsp;Aircraft</span></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="14" id="14" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-14" class="statementtext" href="javascript:__doPostBack(&#39;-14&#39;,&#39;&#39;)">&nbsp;<B>Federal Aviation Regs </B> (FAR) Part was <span class="replaceableText2" name="span14"><a href="javascript:__doPostBack('-14','')" OnMouseOver='popup_exact("Examples","Federal Aviation Regulation that aircraft is operating under (e.g., 121, 91)",670,130)' onMouseOut='popout()' >[regulation]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="15" id="15" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-15" class="statementtext" href="javascript:__doPostBack(&#39;-15&#39;,&#39;&#39;)">&nbsp;<B>Flight Plan</B> was <span class="replaceableText2" name="span15"><a href="javascript:__doPostBack('-15','')" OnMouseOver='popup_exact("Examples","Type of flight plan (e.g., IFR, VFR)",670,130)' onMouseOut='popout()' >[type]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="23" id="23" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-23" class="statementtext" href="javascript:__doPostBack(&#39;-23&#39;,&#39;&#39;)">&nbsp;<B>Flight Phase</B> was <span class="replaceableText2" name="span23"><a href="javascript:__doPostBack('-23','')" OnMouseOver='popup_exact("Examples","Phase of flight (e.g., taxi, parked, cruise)",670,130)' onMouseOut='popout()' >[phase]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="12" id="12" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-12" class="statementtext" href="javascript:__doPostBack(&#39;-12&#39;,&#39;&#39;)">&nbsp;<B>Make/Model</B> was <span class="replaceableText2" name="span12"><a href="javascript:__doPostBack('-12','')" OnMouseOver='popup_exact("Examples","Aircraft Manufacturer and Model (e.g., Boeing 737, Cessna 152)",670,130)' onMouseOut='popout()' >[aircraft type]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="13" id="13" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-13" class="statementtext" href="javascript:__doPostBack(&#39;-13&#39;,&#39;&#39;)">&nbsp;<B>Mission</B> was <span class="replaceableText2" name="span13"><a href="javascript:__doPostBack('-13','')" OnMouseOver='popup_exact("Examples","Flight activity <br>(e.g., ferry, passenger, personal, training)",670,130)' onMouseOut='popout()' >[operation]</a></span></a></td>
+					</tr>
+				</table></td><td align="left" valign="top" width="50%"><table cellspacing="0" cellpadding="0" border="0" width="100%">
+					<tr>
+						<td class="category" valign="middle" colspan="2"><span id="-101" class="category">&nbsp;Place</span></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="19" id="19" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-19" class="statementtext" href="javascript:__doPostBack(&#39;-19&#39;,&#39;&#39;)">&nbsp;<B>Location</B> was <span class="replaceableText2" name="span19"><a href="javascript:__doPostBack('-19','')" OnMouseOver='popup_exact("Examples","Airport, ATC Facility, Intersection, or NAVAID Identifier",670,130)' onMouseOut='popout()' >[identifier]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="17" id="17" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-17" class="statementtext" href="javascript:__doPostBack(&#39;-17&#39;,&#39;&#39;)">&nbsp;<B>State</B> was <span class="replaceableText2" name="span17"><a href="javascript:__doPostBack('-17','')" OnMouseOver='popup_exact("Examples","2 letter state/territory/province identifier where incident occurred. “US” if unspecified or “ FO” for foreign.",670,130)' onMouseOut='popout()' >[abbreviation]</a></span></a></td>
+					</tr><tr>
+						<td class="category" valign="middle" colspan="2"><span id="-104" class="category">&nbsp;Person</span></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="11" id="11" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-11" class="statementtext" href="javascript:__doPostBack(&#39;-11&#39;,&#39;&#39;)">&nbsp;<B>Reporter Organization</B> was <span class="replaceableText2" name="span11"><a href="javascript:__doPostBack('-11','')" OnMouseOver='popup_exact("Examples","Organization reporter is affiliated with (e.g., Air Carrier, Corporate, Personal, FBO)",670,130)' onMouseOut='popout()' >[type]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="1" id="1" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-1" class="statementtext" href="javascript:__doPostBack(&#39;-1&#39;,&#39;&#39;)">&nbsp;<B>Reporter Function</B> was <span class="replaceableText2" name="span1"><a href="javascript:__doPostBack('-1','')" OnMouseOver='popup_exact("Examples","Function of the reporter, can be multi-select (e.g., Captain, Pilot Flying)",670,130)' onMouseOut='popout()' >[position]</a></span></a></td>
+					</tr><tr>
+						<td class="category" valign="middle" colspan="2"><span id="-105" class="category">&nbsp;Event Assessment</span></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="6" id="6" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-6" class="statementtext" href="javascript:__doPostBack(&#39;-6&#39;,&#39;&#39;)">&nbsp;<B>Event Type</B> was <span class="replaceableText2" name="span6"><a href="javascript:__doPostBack('-6','')" OnMouseOver='popup_exact("Examples","ASRS term “anomaly” is event type (e.g., Aircraft Equipment Problem, NMAC)",670,130)' onMouseOut='popout()' >[anomaly]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="8" id="8" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-8" class="statementtext" href="javascript:__doPostBack(&#39;-8&#39;,&#39;&#39;)">&nbsp;<B>Detector</b> was <span class="replaceableText2" name="span8"><a href="javascript:__doPostBack('-8','')" OnMouseOver='popup_exact("Examples","Person or equipment that discovered the event (e.g., Flight Crew)",670,130)' onMouseOut='popout()' >[equipment/human]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="7" id="7" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-7" class="statementtext" href="javascript:__doPostBack(&#39;-7&#39;,&#39;&#39;)">&nbsp;<B>Primary Problem</B> was <span class="replaceableText2" name="span7"><a href="javascript:__doPostBack('-7','')" OnMouseOver='popup_exact("Examples","ASRS analyst assessment of the primary problem (e.g., Aircraft, Human Factors, Weather)",670,130)' onMouseOut='popout()' >[most prominent factor]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="9" id="9" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-9" class="statementtext" href="javascript:__doPostBack(&#39;-9&#39;,&#39;&#39;)">&nbsp;<B>Contributing Factors</B> were <span class="replaceableText2" name="span9"><a href="javascript:__doPostBack('-9','')" OnMouseOver='popup_exact("Examples","ASRS analyst assessment of all the problem areas or contributing factors to the event",670,130)' onMouseOut='popout()' >[problem areas]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="10" id="10" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-10" class="statementtext" href="javascript:__doPostBack(&#39;-10&#39;,&#39;&#39;)">&nbsp;<B>Human Factors</B> (since 6/09) were <span class="replaceableText2" name="span10"><a href="javascript:__doPostBack('-10','')" OnMouseOver='popup_exact("Examples","Communication, Fatigue, Time Pressure, etc.",670,130)' onMouseOut='popout()' >[factor]</a></span></a></td>
+					</tr><tr>
+						<td align="right" width="40"><input type="image" name="25" id="25" src="images/plus_button.gif" border="0" /></td><td valign="middle"><a id="-25" class="statementtext" href="javascript:__doPostBack(&#39;-25&#39;,&#39;&#39;)">&nbsp;<B>Result</B> was <span class="replaceableText2" name="span25"><a href="javascript:__doPostBack('-25','')" OnMouseOver='popup_exact("Examples","Incident resolution or corrective action (e.g., Evacuated, Declared Emergency)",670,130)' onMouseOut='popout()' >[consequence]</a></span></a></td>
+					</tr>
+				</table></td>
+			</tr><tr>
+				<td class="category" align="center" valign="middle" colspan="2" width="100%"><span id="-106" class="category">&nbsp;Text: Narrative / Synopsis</span></td>
+			</tr><tr>
+				<td align="center" valign="middle" colspan="2" height="10" width="100%"><input type="image" name="18" id="18" src="images/plus_button.gif" align="absbottom" border="0" /><a id="-18" class="statementtext" href="javascript:__doPostBack(&#39;-18&#39;,&#39;&#39;)">&nbsp;<B>Text</B> contains <span class="replaceableText2" name="span18"><a href="javascript:__doPostBack('-18','')" OnMouseOver='popup_exact("Examples","Text search for terms used in reporter narrative and analyst synopsis",670,130)' onMouseOut='popout()' >[words]</a></span></a></td>
+			</tr>
+		</table></td>
+	</tr><tr>
+		<td colspan="2"><BR></td>
+	</tr><tr>
+		<td class="querywizardheadersecondary">&nbsp;Current Search Items:&nbsp;&nbsp;&nbsp;</td><td class="querywizardheadersecondary" align="right"></td>
+	</tr><tr>
+		<td colspan="2"><BR></td>
+	</tr><tr>
+		<td colspan="2"><table cellspacing="0" cellpadding="0" border="0" width="100%">
+			<tr>
+				<td width="10%">&nbsp;</td><td width="90%"><i>Search is empty.</i></td>
+			</tr>
+		</table></td>
+	</tr><tr>
+		<td colspan="2"><BR></td>
+	</tr><tr>
+		<td class="querywizardbuttonrow" align="right" colspan="2"><input type="image" name="_ctl5" src="images/QueryWizardBackButton.png" alt="Return to the previous page." border="0" /><input type="image" name="_ctl6" src="images/QueryWizardRunSearchButton.png" alt="Perform this search and go to the Results page." border="0" /></td>
+	</tr>
+</table><br>
+			<span></span>
+<!--
+<TR>
+	<TD CLASS='maintext' COLSPAN='2' Align="center">
+		[ <A href="javascript:openPopupAndSize('CodingForm.pdf', 900, 650)"><IMG src="images/PdfIcon2.png" border="0">ASRS 
+			Database Items</A> ][
+		<a id="_ctl9_SupportLink" tabindex="-1" href="/ASRSDBOnline/ContactSupport.aspx?wb_referrer=%2fASRSDBOnline%2fQueryWizard_Filter.aspx">Contact Support</a>&nbsp;]  [
+		<a id="_ctl9_SettingsLink" tabindex="-1" href="/ASRSDBOnline/ChangeMenu.asp?wb_referrer=%2fASRSDBOnline%2fQueryWizard_Filter.aspx">My Workbench Settings</a>
+		]
+		[ <a TABINDEX='-1' href="javascript:HelpWindow('QueryWizard_Filter.aspx')">
+			Help</a> ]&nbsp;
+	</TD>
+</TR>
+<script>
+	// Popup the help window
+    function HelpWindow(page_name)
+	{
+	    var win = window.open('help.aspx?Doc=' + page_name, 'asrshelp','width=500,height=350,resizable=yes,scrollbars=yes', true);
+	    win.focus();
+	}
+    function openPopupAndSize(link, startWidth, startHeight)
+    {
+        valuePopup = window.open(link, "valueSelectPopup","scrollBars=yes,resizable=yes,width=" + startWidth + ",height=" + startHeight + ",toolbar=no,menubar=no,location=no,directories=no", true);
+    }
+</script>
+-->
+<!--<TR>
+	<TD CLASS='maintext' COLSPAN='2' Align="center">
+		<DIV>
+			<span id="_ctl9_Labelc2">Database:</span>&nbsp;
+			<span id="_ctl9_DBLabel"></span>
+		</DIV>
+		<DIV>
+			<span id="_ctl9_VersionLabel"></span></DIV>
+	</TD>
+</TR>-->
+<TR>
+	<TD CLASS='maintext' COLSPAN='2'>
+		<DIV align="center">
+			<img src="images/asrs_logo.gif"> v2.9</DIV>
+	</TD>
+</TR>
+<br>
+		</form>
+		<script language="javascript">
+
+            //keep the box opened. We used to expand and collapse this box but the current desire is to leave it open.
+            //Therefore, this overrides onHeaderClick();		
+		    function openInstruction()
+		    {
+				// parent listbox
+				var listBoxElement = document.getElementById( "StartingHelp" );
+				var listBoxHeaderImage = document.getElementById( "StartingHelp" + "HeaderImage" );
+		        listBoxElement.style.display = "block";
+		    }
+		    //=========================================
+			// Handler for List box header clicks
+			// JL: 09/22/09 v2 - this is no longer clickable, expanded/contracted
+			function OnHeaderClick( listBoxId )
+			{
+				// parent listbox
+				var listBoxElement = document.getElementById( listBoxId );
+				var listBoxHeaderImage = document.getElementById( listBoxId + "HeaderImage" );
+
+				if ( listBoxElement != null )
+				{
+					if( listBoxElement.style.display == "none" )
+					{
+						listBoxElement.style.display = "block";
+						listBoxHeaderImage.src = "images/uparrow.gif";
+					}
+					else
+					{
+						listBoxElement.style.display = "none";
+						listBoxHeaderImage.src = "images/downarrow.gif";
+					}
+				}
+			}
+
+		</script>
+	</body>
+</HTML>
+
