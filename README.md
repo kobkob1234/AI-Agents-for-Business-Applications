@@ -29,5 +29,33 @@ The script automates the interaction with the NASA ASRS web interface:
 4.  **Search Execution**: Submits the search query.
 5.  **Download**: Triggers the CSV export and saves the file.
 
+
 ## Troubleshooting
 If the script fails to find buttons or elements, the structure of the NASA website may have changed. The script uses `BeautifulSoup` to parse HTML and simulate form submissions (POST requests) with valid ViewState.
+
+## Collaboration
+To collaborate on this project:
+
+### If you are part of the team:
+1.  Ask the repository owner to add you as a **Collaborator**.
+    *   *Owner instructions:* Go to **Settings** > **Collaborators** > **Add people** and enter the email or username.
+2.  Clone the repository:
+    ```bash
+    git clone https://github.com/kobkob1234/AI-Agents-for-Business-Applications.git
+    ```
+3.  Create a new branch for your changes:
+    ```bash
+    git checkout -b feature/my-new-feature
+    ```
+4.  Commit and push your changes:
+    ```bash
+    git add .
+    git commit -m "Description of changes"
+    git push origin feature/my-new-feature
+    ```
+5.  Open a Pull Request on GitHub to merge your changes into `main`.
+
+### If you are an external contributor:
+1.  **Fork** the repository (click the "Fork" button on GitHub).
+2.  Clone your forked repository.
+3.  Push changes to your fork and create a **Pull Request** from your fork to this repository.
