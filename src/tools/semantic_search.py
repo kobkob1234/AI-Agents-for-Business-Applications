@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from src.tools.vector_store_manager import VectorStoreManager
 
 class SemanticSearch:
-    def __init__(self, db_dir: str = "chroma_db", collection_name: str = "asrs_reports"):
+    def __init__(self, db_dir: str = "chroma_db", collection_name: str = "asrs-reports"):
         print("Initializing Semantic Search Tool...")
         # db_dir is legacy if we use manager defaults
         self.manager = VectorStoreManager(index_name=collection_name)

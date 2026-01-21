@@ -620,9 +620,16 @@
                     body: JSON.stringify({ prompt: prompt })
                 });
 
-                const data = await response.json();
+                let data;
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    throw new Error(`Server returned ${response.status} ${response.statusText}: ${text.substring(0, 100)}...`);
+                }
 
-                if (data.status === 'ok') {
+                if (response.ok && data.status === 'ok') {
                     output.style.display = 'block';
                     finalReport.textContent = data.response;
 
@@ -655,11 +662,14 @@
                     // Scroll to output
                     output.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 } else {
-                    errorMsg.textContent = "Error: " + (data.error || "Unknown error occurred");
+                    errorMsg.textContent = "Error: " + (data.error || JSON.stringify(data) || "Unknown error occurred");
                     errorMsg.style.display = 'block';
                 }
 
             } catch (err) {
+                errorMsg.textContent = "Detailed Error: " + err.message;
+                errorMsg.style.display = 'block';
+            } finally {
                 errorMsg.textContent = "Network Error: " + err.message;
                 errorMsg.style.display = 'block';
             } finally {
