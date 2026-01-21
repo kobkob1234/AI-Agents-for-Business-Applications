@@ -669,9 +669,7 @@
             } catch (err) {
                 errorMsg.textContent = "Detailed Error: " + err.message;
                 errorMsg.style.display = 'block';
-            } finally {
-                errorMsg.textContent = "Network Error: " + err.message;
-                errorMsg.style.display = 'block';
+
             } finally {
                 runBtn.disabled = false;
                 loader.style.display = 'none';
