@@ -5,6 +5,7 @@ chromadb
 langchain
 langgraph
 langchain-community
+langchain-chroma
 langchain-openai
 scikit-learn
 openpyxl
