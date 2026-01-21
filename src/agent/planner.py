@@ -229,7 +229,7 @@ Only return the JSON object, no additional text."""),
             msg = "No specific findings could be extracted from tools. Proceeding to report generation."
             findings.append(msg)
             steps_log.append({
-                "module": "Deep Analysis",
+                "module": "Fallback Handler",
                 "prompt": "Check Findings",
                 "response": "Fallback: No findings found."
             })

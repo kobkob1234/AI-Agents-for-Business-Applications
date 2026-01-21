@@ -29,7 +29,7 @@ def load_data(data_dir: str = "data") -> pd.DataFrame:
             
             while True:
                 print(f"Fetching rows {start} to {start + batch_size}...")
-                response = client.table("asrs_reports").select("*").range(start, start + batch_size - 1).execute()
+                response = client.table("asrs_reports").select("*").order("ACN").range(start, start + batch_size - 1).execute()
                 data = response.data
                 if not data:
                     break
