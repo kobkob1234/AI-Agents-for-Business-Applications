@@ -59,9 +59,10 @@ async def team_info():
         "group_batch_order_number": "BATCH_ORDER_PLACEHOLDER",
         "team_name": "ASI Team",
         "students": [
-            { "name": "Student A", "email": "student.a@example.com" },
-            { "name": "Student B", "email": "student.b@example.com" },
-            { "name": "Student C", "email": "student.c@example.com" }
+            { "name": "Kobi Amit", "email": "kobiamit@campus.technion.ac.il" },
+            { "name": "Yaniv Steiner", "email": "Yaniv11410@campus.technion.ac.il" },
+            { "name": "Itav Dan", "email": "itav.dan@campus.technion.ac.il" },
+            { "name": "Yuval Komar", "email": "yuval.komar@campus.technion.ac.il" }
         ]
     }
 
@@ -78,13 +79,13 @@ async def agent_info():
                 "prompt": "Location: SAN. Airplane: B737 MAX 8. Event: Descent. Narrative: Experiencing unstable approach and high sink rate due to wake turbulence from preceding A321.",
                 "full_response": "## Executive Summary\nThe reported incident involved a B737 MAX 8 experiencing unstable approach conditions at SAN during descent phase. The primary contributing factor appears to be wake turbulence from a preceding A321 aircraft.\n\n## Historical Corroboration\nSemantic search of the ASRS database identified 5 similar cases involving wake turbulence encounters during approach phase.\n\n## Trend Analysis\nAnalysis indicates stable reporting patterns for wake turbulence incidents, with mean monthly reports around 12-15 for B737 aircraft.\n\n## Cross-Reference Findings\nFiltered data shows 23 similar reports for B737 aircraft at SAN. Most common operator: Southwest Airlines.\n\n## Root Cause Assessment\nInsufficient separation from preceding heavier aircraft during approach phase.\n\n## Recommendations\n1. Review wake turbulence separation standards\n2. Enhance pilot awareness training for wake vortex encounters",
                 "steps": [
-                    "Entity Extraction: Extract aircraft model, location, event type from report",
-                    "Semantic Search: Query vector database for similar historical incidents",
-                    "Structured Filter: Apply database filters for aircraft type and airport",
-                    "Cross-Referencing: Analyze operator patterns and correlations",
-                    "Trend Analyzer: Detect anomalies in incident reporting patterns",
-                    "Deep Analysis: Compare with safety manuals and past reports",
-                    "Report Generation: Synthesize findings into comprehensive RCA report"
+                    { "module": "Entity Extraction", "prompt": "Extract aircraft model...", "response": "Captured: B737 MAX 8, SAN, Descent" },
+                    { "module": "Semantic Search", "prompt": "Query vector database...", "response": "Found 5 similar cases" },
+                    { "module": "Structured Filter", "prompt": "Filter by Aircraft...", "response": "Filtered subset: 23 records" },
+                    { "module": "Cross-Referencing", "prompt": "Analyze operator...", "response": "Top Operator: Southwest Airlines" },
+                    { "module": "Trend Analyzer", "prompt": "Detect anomalies...", "response": "Stable reporting pattern" },
+                    { "module": "Deep Analysis", "prompt": "Compare with manuals...", "response": "Confirmed recurrent issue" },
+                    { "module": "Report Generation", "prompt": "Synthesize findings...", "response": "Generated RCA Report" }
                 ]
             }
         ]
