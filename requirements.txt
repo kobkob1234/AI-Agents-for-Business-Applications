@@ -16,4 +16,5 @@ pydantic
 pinecone-client
 langchain-pinecone
 supabase
+python-dotenv
 

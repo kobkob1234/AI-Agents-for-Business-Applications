@@ -64,9 +64,15 @@ Only return the JSON object, no additional text."""),
             print(f"Entity extraction failed: {e}")
             entities = {"Aircraft Model": "Unknown", "Location": "Unknown"}
             
+        # Full Prompt Tracing
+        try:
+            full_prompt = prompt.format(report=state['input_report'])
+        except:
+            full_prompt = state['input_report'] # Fallback
+
         step_log = {
             "module": "Entity Extraction",
-            "prompt": state['input_report'],
+            "prompt": full_prompt, 
             "response": entities
         }
             
@@ -215,6 +221,16 @@ Only return the JSON object, no additional text."""),
                     "prompt": "Deep Analysis",
                     "response": f"Error: {e}"
                 })
+        
+        # Infinite Loop Fix: Ensure finding exists
+        if not findings:
+            msg = "No specific findings could be extracted from tools. Proceeding to report generation."
+            findings.append(msg)
+            steps_log.append({
+                "module": "Tool Execution",
+                "prompt": "Check Findings",
+                "response": "Fallback: No findings found."
+            })
             
         return {"findings": findings, "steps_trace": steps_log}
 

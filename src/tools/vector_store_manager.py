@@ -55,7 +55,7 @@ class VectorStoreManager:
             return Chroma(
                 persist_directory="chroma_db",
                 embedding_function=self.embeddings,
-                collection_name="asrs_reports"
+                collection_name="asrs-reports"
             )
             
     def create_pinecone_index_if_needed(self):

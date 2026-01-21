@@ -3,15 +3,44 @@ import os
 import glob
 from src.utils.columns import COLUMN_NAMES
 
+try:
+    from supabase import create_client, Client
+    HAS_SUPABASE = True
+except ImportError:
+    HAS_SUPABASE = False
+
 def load_data(data_dir: str = "data") -> pd.DataFrame:
     """
-    Loads all CSV files from the specified directory and merges them into a single DataFrame.
+    Loads data from Supabase (Primary) or local CSV files (Fallback).
+    """
+    # 1. Try Supabase
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
     
-    Args:
-        data_dir (str): Path to the directory containing ASRS CSV files.
-        
-    Returns:
-        pd.DataFrame: Merged DataFrame containing all reports.
+    if HAS_SUPABASE and supabase_url and supabase_key:
+        try:
+            print("Attempting to load data from Supabase (Primary)...")
+            client: Client = create_client(supabase_url, supabase_key)
+            # Fetch all rows (limit to reasonable amount for prototype if needed, e.g. 1000)
+            # Note: real prod would use pagination.
+            response = client.table("asrs_reports").select("*").execute()
+            
+            if response.data and len(response.data) > 0:
+                print(f"✅ Successfully loaded {len(response.data)} records from Supabase.")
+                df = pd.DataFrame(response.data)
+                # Ensure columns match expected schema if needed
+                return df
+            else:
+                 print("⚠️ Supabase table 'asrs_reports' empty or not found. Falling back to local CSVs.")
+        except Exception as e:
+             print(f"⚠️ Supabase load failed: {e}. Falling back to local CSVs.")
+    
+    # 2. Fallback to Local CSV
+    return load_from_csv(data_dir)
+
+def load_from_csv(data_dir: str) -> pd.DataFrame:
+    """
+    Loads all CSV files from the specified directory and merges them into a single DataFrame.
     """
     if not os.path.exists(data_dir):
         print(f"WARNING: Data directory '{data_dir}' not found. Running without local data.")
@@ -39,17 +68,10 @@ def load_data(data_dir: str = "data") -> pd.DataFrame:
             # Read CSV
             if has_header:
                 df = pd.read_csv(file, on_bad_lines='skip', encoding='utf-8', low_memory=False)
-                # Ensure columns match our expected logical names if possible, or just trust them.
-                # If they have different columns, concat will fill NaNs.
             else:
-                # Use our hardcoded names
-                # Note: If the file has fewer columns than we have names, pandas will fill NaNs?
-                # Or if it has MORE?
-                # We should assume 126 cols.
                 df = pd.read_csv(file, header=None, names=COLUMN_NAMES, on_bad_lines='skip', encoding='utf-8', low_memory=False)
             
             # Basic cleanup
-            # Filter out rows that might be headers repeated or empty
             if 'ACN' in df.columns:
                  df = df[pd.to_numeric(df['ACN'], errors='coerce').notna()]
             

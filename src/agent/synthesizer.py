@@ -68,13 +68,18 @@ Be concise but thorough. Focus on safety implications."""),
         except Exception as e:
             report = f"Failed to generate report: {e}"
             
+        try:
+            full_prompt = prompt.format(
+                input_report=state['input_report'],
+                entities=state['extracted_entities'],
+                findings=state['findings']
+            )
+        except:
+             full_prompt = "Prompt formatting failed."
+
         step_log = {
             "module": "Report Generation",
-            "prompt": {
-                "input_report": state['input_report'],  # Full input for complete trace
-                "entities": state['extracted_entities'],
-                "findings": state['findings']
-            },
+            "prompt": full_prompt,
             "response": report  # Full response per spec requirement
         }
         
