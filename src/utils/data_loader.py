@@ -14,7 +14,9 @@ def load_data(data_dir: str = "data") -> pd.DataFrame:
         pd.DataFrame: Merged DataFrame containing all reports.
     """
     if not os.path.exists(data_dir):
-        raise FileNotFoundError(f"Data directory '{data_dir}' not found.")
+        print(f"WARNING: Data directory '{data_dir}' not found. Running without local data.")
+        print("Note: Semantic search will use vector database only.")
+        return pd.DataFrame()
     
     csv_files = glob.glob(os.path.join(data_dir, "*.csv"))
     

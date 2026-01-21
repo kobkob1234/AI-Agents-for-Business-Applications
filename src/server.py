@@ -78,13 +78,13 @@ async def agent_info():
                 "prompt": "Location: SAN. Airplane: B737 MAX 8. Event: Descent. Narrative: Experiencing unstable approach and high sink rate due to wake turbulence from preceding A321.",
                 "full_response": "## Executive Summary\nThe reported incident involved a B737 MAX 8 experiencing unstable approach conditions at SAN during descent phase. The primary contributing factor appears to be wake turbulence from a preceding A321 aircraft.\n\n## Historical Corroboration\nSemantic search of the ASRS database identified 5 similar cases involving wake turbulence encounters during approach phase.\n\n## Trend Analysis\nAnalysis indicates stable reporting patterns for wake turbulence incidents, with mean monthly reports around 12-15 for B737 aircraft.\n\n## Cross-Reference Findings\nFiltered data shows 23 similar reports for B737 aircraft at SAN. Most common operator: Southwest Airlines.\n\n## Root Cause Assessment\nInsufficient separation from preceding heavier aircraft during approach phase.\n\n## Recommendations\n1. Review wake turbulence separation standards\n2. Enhance pilot awareness training for wake vortex encounters",
                 "steps": [
-                    {"module": "Entity Extraction", "prompt": "Location: SAN. Airplane: B737 MAX 8...", "response": {"Aircraft Model": "B737 MAX 8", "Location": "SAN", "Event Type": "Unstable Approach", "Flight Phase": "Descent"}},
-                    {"module": "Semantic Search", "prompt": {"query": "B737 MAX 8 Unstable Approach SAN"}, "response": "Found 5 similar cases..."},
-                    {"module": "Structured Filter", "prompt": {"Make_Model": "B737 MAX 8", "Airport": "SAN"}, "response": "Count: 23"},
-                    {"module": "Cross-Referencing", "prompt": "Check correlations in Operator", "response": "Top Operator: Southwest Airlines"},
-                    {"module": "Trend Analyzer", "prompt": "Analyze trend anomalies", "response": {"status": "analyzed", "mean_monthly_reports": 14.2}},
-                    {"module": "Deep Analysis", "prompt": "Compare with safety manuals/past reports", "response": "No identical recurrences found."},
-                    {"module": "Report Generation", "prompt": {"input_report": "...", "entities": {}, "findings": []}, "response": "## Executive Summary..."}
+                    "Entity Extraction: Extract aircraft model, location, event type from report",
+                    "Semantic Search: Query vector database for similar historical incidents",
+                    "Structured Filter: Apply database filters for aircraft type and airport",
+                    "Cross-Referencing: Analyze operator patterns and correlations",
+                    "Trend Analyzer: Detect anomalies in incident reporting patterns",
+                    "Deep Analysis: Compare with safety manuals and past reports",
+                    "Report Generation: Synthesize findings into comprehensive RCA report"
                 ]
             }
         ]

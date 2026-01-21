@@ -71,7 +71,7 @@ Be concise but thorough. Focus on safety implications."""),
         step_log = {
             "module": "Report Generation",
             "prompt": {
-                "input_report": state['input_report'][:200] + "...",  # Truncate input for readability
+                "input_report": state['input_report'],  # Full input for complete trace
                 "entities": state['extracted_entities'],
                 "findings": state['findings']
             },
