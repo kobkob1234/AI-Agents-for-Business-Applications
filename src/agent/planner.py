@@ -18,7 +18,7 @@ class Planner:
             print(f"Using LLMod.ai Model: {model_name}")
             self.llm = ChatOpenAI(
                 model=model_name, 
-                temperature=0,
+                temperature=1,
                 api_key=api_key,
                 base_url=base_url
             )

@@ -15,7 +15,7 @@ class Synthesizer:
         if api_key:
             self.llm = ChatOpenAI(
                 model=model_name, 
-                temperature=0,
+                temperature=1,
                 api_key=api_key,
                 base_url=base_url
             )
