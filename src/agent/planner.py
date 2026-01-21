@@ -18,7 +18,7 @@ class Planner:
             print(f"Using LLMod.ai Model: {model_name}")
             self.llm = ChatOpenAI(
                 model=model_name, 
-                temperature=1,
+                temperature=1,  # API REQUIREMENT: gpt-5 requires temp=1
                 api_key=api_key,
                 base_url=base_url
             )
@@ -64,11 +64,13 @@ Only return the JSON object, no additional text."""),
             print(f"Entity extraction failed: {e}")
             entities = {"Aircraft Model": "Unknown", "Location": "Unknown"}
             
-        # Full Prompt Tracing
+        # Full Prompt Tracing - Manual Construction for Robustness
         try:
-            full_prompt = prompt.format(report=state['input_report'])
+            system_msg = prompt.messages[0].prompt.template
+            user_msg = state['input_report']
+            full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
         except:
-            full_prompt = state['input_report'] # Fallback
+            full_prompt = f"Report: {state['input_report']}"
 
         step_log = {
             "module": "Entity Extraction",
@@ -227,7 +229,7 @@ Only return the JSON object, no additional text."""),
             msg = "No specific findings could be extracted from tools. Proceeding to report generation."
             findings.append(msg)
             steps_log.append({
-                "module": "Tool Execution",
+                "module": "Deep Analysis",
                 "prompt": "Check Findings",
                 "response": "Fallback: No findings found."
             })

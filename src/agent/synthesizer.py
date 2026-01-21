@@ -15,7 +15,7 @@ class Synthesizer:
         if api_key:
             self.llm = ChatOpenAI(
                 model=model_name, 
-                temperature=1,
+                temperature=1,  # API REQUIREMENT: gpt-5 requires temp=1
                 api_key=api_key,
                 base_url=base_url
             )
@@ -69,11 +69,10 @@ Be concise but thorough. Focus on safety implications."""),
             report = f"Failed to generate report: {e}"
             
         try:
-            full_prompt = prompt.format(
-                input_report=state['input_report'],
-                entities=state['extracted_entities'],
-                findings=state['findings']
-            )
+            # Robust Manual Logging
+            system_msg = prompt.messages[0].prompt.template
+            user_msg = f"Input Report: {state['input_report']}\n\nExtracted Entities: {state['extracted_entities']}\n\nTool Findings: {state['findings']}"
+            full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
         except:
              full_prompt = "Prompt formatting failed."
 

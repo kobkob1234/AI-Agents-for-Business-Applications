@@ -41,7 +41,7 @@ An intelligent autonomous agent designed to investigate aviation safety reports 
 3.  **Configure Environment**:
     Create a `.env` file (or use system env vars):
     ```env
-    OPENAI_API_KEY=sk-FA8TYuSqxj15-1EpOYzbKA  # LLMod.ai Key
+    OPENAI_API_KEY=your_llmod_api_key  # LLMod.ai Key
     OPENAI_BASE_URL=https://api.llmod.ai/v1
     SUPABASE_URL=https://lwnzbsulpbesggkhttnv.supabase.co
     SUPABASE_KEY=your_supabase_anon_key
@@ -71,32 +71,6 @@ This project is configured for **Render**.
 | `GET` | `/api/model_architecture` | Returns the architecture diagram image. |
 | `POST` | `/api/execute` | Runs the agent. accepts `{"prompt": "..."}`. |
 
-## ✅ Submission Checklist & GitHub Requirements
 
-To satisfy the course requirements, the GitHub repo includes:
-
-### 1. Codebase Structure
-*   [x] `requirements.txt` - Complete dependency list.
-*   [x] `README.md` - Documentation (You are reading it!).
-*   [x] `src/` - Source code only (Clean of temp files).
-    *   `src/agent/` - Agent logic (Graph, Planner, Synthesizer).
-    *   `src/tools/` - Tools (Search, Trends, Filter).
-    *   `src/utils/` - Data loading & DB managers.
-    *   `src/static/` - Frontend assets & images.
-*   [x] `.gitignore` - Properly setup to exclude `data/`, secrets, and venv.
-
-### 2. Required Functionality
-*   [x] **Supabase Integration**: Logs executions to `agent_executions` table.
-*   [x] **Pinecone Integration**: Vector search ready.
-*   [x] **LLM Enforced**: Uses `RPRTHPB-gpt-5-mini`.
-*   [x] **Endpoints**: All 4 required endpoints implemented.
-
-### 3. Final Verification for Student
-Before submitting, ensure:
-- [ ] **`/api/team_info` Updated**: Did you put your real names in `src/server.py`?
-- [ ] **Pinecone Data**: Did you ingest the data into your Pinecone index?
-- [ ] **Render URL**: Is the site live and accessible?
-
----
 
 **Developed for AI Agents for Business Applications Course (Winter 2026)**

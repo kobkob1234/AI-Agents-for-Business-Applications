@@ -1,27 +1,73 @@
-import argparse
+
+import os
+import sys
+import pandas as pd
+from dotenv import load_dotenv
+
+# Load env before imports to ensure keys are ready
+load_dotenv()
+
+# Add project root to path (../../ from this script)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
 from src.utils.data_loader import load_data, preprocess_data
 from src.tools.semantic_search import SemanticSearch
-import pandas as pd
 
-def ingest(filter_query=None):
-    print("Loading data...")
-    df = load_data()
-    df = preprocess_data(df)
+def main():
+    print("🚀 Starting Pinecone Ingestion Script...")
     
-    if filter_query:
-        print(f"Filtering data for ingestion with query: '{filter_query}' (in columns)")
-        # Simple substring match across all columns for simplicity
-        # Or just 'Locale Reference'
-        mask = df.astype(str).apply(lambda x: x.str.contains(filter_query, case=False, na=False)).any(axis=1)
-        df = df[mask]
-        print(f"Filtered down to {len(df)} records.")
+    # 1. Load Data
+    # Assuming run from root, 'data/' works. If run from here, might need ../../data
+    # But usually scripts are run from root. Let's try to be robust.
+    data_path = "data"
+    if not os.path.exists(data_path):
+        # Try relative to script
+        data_path = os.path.join(os.path.dirname(__file__), "../../data")
+    
+    print(f"Loading data from '{data_path}' directory...")
+    df = load_data(data_path)
+    
+    if df.empty:
+        print(f"❌ No data found! Please ensure '{data_path}' has CSV files.")
+        return
+
+    # PREPROCESS to create 'Full_Narrative'
+    print("Preprocessing data...")
+    df = preprocess_data(df)
+
+    print(f"✅ Loaded {len(df)} total records.")
+
+    # 2. Sample Data (To save cost/time)
+    # Try to sort by date if possible
+    if 'Event_Date' in df.columns:
+        print("Sorting by date to get recent reports...")
+        try:
+            df['Event_Date'] = pd.to_datetime(df['Event_Date'], errors='coerce')
+            df = df.sort_values(by='Event_Date', ascending=False)
+        except Exception as e:
+            print(f"⚠️ Date sorting failed: {e}. Using default order.")
+    
+    SAMPLE_SIZE = 150
+    df_sample = df.head(SAMPLE_SIZE)
+    print(f"Taking top {SAMPLE_SIZE} records for ingestion.")
+
+    # 3. Initialize Semantic Search (connects to Pinecone via Manager)
+    # Force Pinecone check by ensuring env var is visible (it is loaded by dotenv)
+    if not os.environ.get("PINECONE_API_KEY"):
+        print("❌ PINECONE_API_KEY not found in environment!")
+        return
+
+    try:
+        search_tool = SemanticSearch(collection_name="asrs-reports")
         
-    search_tool = SemanticSearch()
-    search_tool.ingest_data(df, batch_size=100)
+        # 4. Ingest
+        print(f"📡 Ingesting into Pinecone index: '{search_tool.manager.index_name}'...")
+        search_tool.ingest_data(df_sample, batch_size=50)
+        
+        print("🎉 Ingestion Complete Check your Pinecone dashboard.")
+        
+    except Exception as e:
+        print(f"❌ Error during ingestion: {e}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--filter", type=str, help="Substring filter to ingest only subset (e.g. 'SAN')")
-    args = parser.parse_args()
-    
-    ingest(args.filter)
+    main()

@@ -21,13 +21,27 @@ def load_data(data_dir: str = "data") -> pd.DataFrame:
         try:
             print("Attempting to load data from Supabase (Primary)...")
             client: Client = create_client(supabase_url, supabase_key)
-            # Fetch all rows (limit to reasonable amount for prototype if needed, e.g. 1000)
-            # Note: real prod would use pagination.
-            response = client.table("asrs_reports").select("*").execute()
             
-            if response.data and len(response.data) > 0:
-                print(f"✅ Successfully loaded {len(response.data)} records from Supabase.")
-                df = pd.DataFrame(response.data)
+            # Fetch all rows with pagination
+            all_rows = []
+            batch_size = 1000
+            start = 0
+            
+            while True:
+                print(f"Fetching rows {start} to {start + batch_size}...")
+                response = client.table("asrs_reports").select("*").range(start, start + batch_size - 1).execute()
+                data = response.data
+                if not data:
+                    break
+                all_rows.extend(data)
+                
+                if len(data) < batch_size:
+                    break
+                start += batch_size
+            
+            if len(all_rows) > 0:
+                print(f"✅ Successfully loaded {len(all_rows)} records from Supabase.")
+                df = pd.DataFrame(all_rows)
                 # Ensure columns match expected schema if needed
                 return df
             else:
