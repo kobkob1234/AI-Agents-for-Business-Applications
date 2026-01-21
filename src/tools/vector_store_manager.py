@@ -40,6 +40,12 @@ class VectorStoreManager:
         
         if pinecone_key and HAS_PINECONE:
             print(f"Connecting to Pinecone Index: {self.index_name}")
+            # Ensure index exists
+            try:
+                self.create_pinecone_index_if_needed()
+            except Exception as e:
+                print(f"Warning: Failed to ensure Pinecone index exists: {e}")
+
             return PineconeVectorStore(
                 index_name=self.index_name,
                 embedding=self.embeddings
