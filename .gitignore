@@ -1,5 +1,30 @@
+# Data files
 data/
+*.zip
+
+# Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+env/
+
+# System files
 .DS_Store
-*.zip
+.tmp_ppt_images/
+
+# Local databases
+chroma_db/
+
+# IDE
+.idea/
+.vscode/
+
+# Large files (course materials)
+*.pdf
+*.pptx
+
+# Sensitive files - DO NOT PUSH
+.env
+*.env
+secret*.txt

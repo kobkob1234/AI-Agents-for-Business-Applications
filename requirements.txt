@@ -1,2 +1,17 @@
 requests
 beautifulsoup4
+pandas
+chromadb
+langchain
+langgraph
+langchain-openai
+scikit-learn
+openpyxl
+fastapi
+uvicorn
+python-multipart
+pydantic
+pinecone-client
+langchain-pinecone
+supabase
+

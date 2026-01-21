@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASI Agent - Autonomous Safety Investigator</title>
+    <meta name="description" content="AI-powered aviation safety report analysis using ReAct architecture">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-start: #0f0f23;
+            --bg-gradient-end: #1a1a3e;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0c0;
+            --accent-blue: #4f8fff;
+            --accent-cyan: #00d4ff;
+            --accent-green: #00ff88;
+            --accent-orange: #ff9f43;
+            --error-red: #ff5252;
+            --step-bg: rgba(79, 143, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        .nav-tab {
+            padding: 12px 24px;
+            border-radius: 30px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            background: rgba(79, 143, 255, 0.2);
+            border-color: var(--accent-blue);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: white;
+            border-color: transparent;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(to bottom, var(--accent-blue), var(--accent-cyan));
+            border-radius: 2px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            resize: vertical;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(79, 143, 255, 0.2);
+        }
+
+        textarea::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(79, 143, 255, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--card-border);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--card-border);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loader-text {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        .error-msg {
+            background: rgba(255, 82, 82, 0.1);
+            border: 1px solid var(--error-red);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--error-red);
+            display: none;
+            margin-top: 20px;
+        }
+
+        #output {
+            display: none;
+        }
+
+        .report-content {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .step {
+            background: var(--step-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .step:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .step-header {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .step-header:hover {
+            background: rgba(79, 143, 255, 0.1);
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            margin-right: 12px;
+        }
+
+        .step-title {
+            display: flex;
+            align-items: center;
+        }
+
+        .step-arrow {
+            transition: transform 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .step.open .step-arrow {
+            transform: rotate(180deg);
+        }
+
+        .step-body {
+            padding: 0 20px 20px;
+            display: none;
+        }
+
+        .step.open .step-body {
+            display: block;
+        }
+
+        .step-section {
+            margin-top: 12px;
+        }
+
+        .step-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .step-code {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 12px;
+            color: #e0e0e0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Architecture View */
+        .architecture-view {
+            display: none;
+        }
+
+        .architecture-view.active {
+            display: block;
+        }
+
+        .agent-view {
+            display: block;
+        }
+
+        .agent-view.hidden {
+            display: none;
+        }
+
+        .arch-image {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .info-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .info-item-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 5px;
+        }
+
+        .info-item-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .app-container {
+                padding: 20px 15px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">✈️</div>
+            <h1>Autonomous Safety Investigator</h1>
+            <p class="subtitle">AI-Powered Aviation Root Cause Analysis</p>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" onclick="showView('agent')">🔍 Investigation</button>
+            <button class="nav-tab" onclick="showView('architecture')">🏗️ Architecture</button>
+            <button class="nav-tab" onclick="showView('info')">ℹ️ Agent Info</button>
+        </nav>
+
+        <!-- Investigation View -->
+        <div id="agentView" class="agent-view">
+            <div class="card">
+                <div class="card-title">Input Safety Report</div>
+                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
+                    Paste an aviation safety report to analyze potential root causes and systemic issues.
+                </p>
+                <textarea id="promptInput"
+                    placeholder="Example: Location: SAN. Airplane: B737 MAX 8. Event: Descent. Narrative: Experiencing unstable approach and high sink rate due to wake turbulence from preceding A321..."></textarea>
+                <div class="btn-container">
+                    <button id="runBtn" class="btn btn-primary" onclick="runAgent()">
+                        <span>▶</span> Run Investigation
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadExample()">
+                        📋 Load Example
+                    </button>
+                </div>
+                <div class="error-msg" id="errorMsg"></div>
+            </div>
+
+            <div class="loader" id="loader">
+                <div class="loader-spinner"></div>
+                <p class="loader-text">Analyzing report... Extracting entities, searching historical data,
+                    cross-referencing patterns...</p>
+            </div>
+
+            <div id="output">
+                <div class="card">
+                    <div class="card-title">📊 Investigation Report</div>
+                    <div class="report-content" id="finalReport"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🔗 Execution Trace</div>
+                    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 15px;">
+                        Click on each step to view the module's input and output.
+                    </p>
+                    <div class="steps-container" id="stepsContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architecture View -->
+        <div id="architectureView" class="architecture-view">
+            <div class="card">
+                <div class="card-title">Agent Architecture</div>
+                <p style="color: var(--text-secondary); font-size: 14px;">
+                    ReAct-based architecture with Planner, Toolbox, and Synthesizer layers.
+                </p>
+                <img id="archImage" class="arch-image" src="/api/model_architecture" alt="Agent Architecture Diagram"
+                    onerror="this.style.display='none'; document.getElementById('archError').style.display='block';">
+                <p id="archError" style="display:none; color: var(--error-red); margin-top: 15px;">
+                    Architecture image not found. Please ensure architecture.png exists in src/static/.
+                </p>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-item-value">7</div>
+                        <div class="info-item-label">Processing Stages</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-value">3</div>
+                        <div class="info-item-label">Toolbox Modules</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-value">RAG</div>
+                        <div class="info-item-label">Vector Search</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info View -->
+        <div id="infoView" class="architecture-view">
+            <div class="card">
+                <div class="card-title">Agent Information</div>
+                <div id="agentInfoContent" style="color: var(--text-secondary);">
+                    Loading agent information...
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">Team Information</div>
+                <div id="teamInfoContent" style="color: var(--text-secondary);">
+                    Loading team information...
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            ASI Agent • Course Project • Powered by LangGraph & LLMod.ai
+        </footer>
+    </div>
+
+    <script>
+        function showView(view) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('agentView').classList.toggle('hidden', view !== 'agent');
+            document.getElementById('architectureView').classList.toggle('active', view === 'architecture');
+            document.getElementById('infoView').classList.toggle('active', view === 'info');
+
+            if (view === 'info') loadInfoViews();
+        }
+
+        function loadExample() {
+            document.getElementById('promptInput').value =
+                "Location: SAN. Airplane: B737 MAX 8. Event: Descent.\n\nNarrative: During approach to runway 27, we experienced unstable approach conditions with high sink rate. The preceding aircraft was an A321. We encountered significant wake turbulence approximately 3 miles from the runway threshold. Aircraft required go-around due to inability to stabilize before decision height.";
+        }
+
+        async function loadInfoViews() {
+            try {
+                const agentInfo = await fetch('/api/agent_info').then(r => r.json());
+                document.getElementById('agentInfoContent').innerHTML = `
+                    <p style="margin-bottom: 15px;"><strong style="color: var(--accent-cyan);">Description:</strong> ${agentInfo.description}</p>
+                    <p style="margin-bottom: 15px;"><strong style="color: var(--accent-cyan);">Purpose:</strong> ${agentInfo.purpose}</p>
+                    <p><strong style="color: var(--accent-cyan);">Prompt Template:</strong></p>
+                    <div class="step-code" style="margin-top: 8px;">${agentInfo.prompt_template.template}</div>
+                `;
+            } catch (e) {
+                document.getElementById('agentInfoContent').innerHTML = 'Failed to load agent info.';
+            }
+
+            try {
+                const teamInfo = await fetch('/api/team_info').then(r => r.json());
+                let studentsHtml = teamInfo.students.map(s =>
+                    `<li style="margin-bottom: 8px;">${s.name} - <span style="color: var(--accent-blue)">${s.email}</span></li>`
+                ).join('');
+                document.getElementById('teamInfoContent').innerHTML = `
+                    <p style="margin-bottom: 10px;"><strong style="color: var(--accent-cyan);">Team:</strong> ${teamInfo.team_name}</p>
+                    <p style="margin-bottom: 10px;"><strong style="color: var(--accent-cyan);">Batch Order:</strong> ${teamInfo.group_batch_order_number}</p>
+                    <p style="margin-bottom: 10px;"><strong style="color: var(--accent-cyan);">Students:</strong></p>
+                    <ul style="margin-left: 20px;">${studentsHtml}</ul>
+                `;
+            } catch (e) {
+                document.getElementById('teamInfoContent').innerHTML = 'Failed to load team info.';
+            }
+        }
+
+        async function runAgent() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            if (!prompt) {
+                alert("Please enter a report text.");
+                return;
+            }
+
+            const runBtn = document.getElementById('runBtn');
+            const loader = document.getElementById('loader');
+            const output = document.getElementById('output');
+            const errorMsg = document.getElementById('errorMsg');
+            const finalReport = document.getElementById('finalReport');
+            const stepsContainer = document.getElementById('stepsContainer');
+
+            runBtn.disabled = true;
+            loader.style.display = 'block';
+            output.style.display = 'none';
+            errorMsg.style.display = 'none';
+            finalReport.textContent = '';
+            stepsContainer.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    output.style.display = 'block';
+                    finalReport.textContent = data.response;
+
+                    data.steps.forEach((step, index) => {
+                        const stepEl = document.createElement('div');
+                        stepEl.className = 'step';
+
+                        stepEl.innerHTML = `
+                            <div class="step-header" onclick="toggleStep(this.parentElement)">
+                                <div class="step-title">
+                                    <span class="step-number">${index + 1}</span>
+                                    <span>${step.module}</span>
+                                </div>
+                                <span class="step-arrow">▼</span>
+                            </div>
+                            <div class="step-body">
+                                <div class="step-section">
+                                    <div class="step-section-title">Input / Prompt</div>
+                                    <pre class="step-code">${JSON.stringify(step.prompt, null, 2)}</pre>
+                                </div>
+                                <div class="step-section">
+                                    <div class="step-section-title">Output / Response</div>
+                                    <pre class="step-code">${JSON.stringify(step.response, null, 2)}</pre>
+                                </div>
+                            </div>
+                        `;
+                        stepsContainer.appendChild(stepEl);
+                    });
+
+                    // Scroll to output
+                    output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                    errorMsg.textContent = "Error: " + (data.error || "Unknown error occurred");
+                    errorMsg.style.display = 'block';
+                }
+
+            } catch (err) {
+                errorMsg.textContent = "Network Error: " + err.message;
+                errorMsg.style.display = 'block';
+            } finally {
+                runBtn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        function toggleStep(stepEl) {
+            stepEl.classList.toggle('open');
+        }
+
+        // Initialize
+        window.onload = function () {
+            fetch('/api/team_info').then(r => r.json()).then(console.log).catch(console.error);
+        }
+    </script>
+</body>
+
+</html>
