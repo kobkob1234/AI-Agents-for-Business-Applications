@@ -62,7 +62,7 @@ async def team_info():
             { "name": "Kobi Amit", "email": "kobiamit@campus.technion.ac.il" },
             { "name": "Yaniv Steiner", "email": "Yaniv11410@campus.technion.ac.il" },
             { "name": "Itav Dan", "email": "itav.dan@campus.technion.ac.il" },
-            { "name": "Yuval Komar", "email": "yuval.komar@campus.technion.ac.il" }
+            { "name": "Yuval Komar", "email": "Yuval.komar@campus.technion.ac.il" }
         ]
     }
 
