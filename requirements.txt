@@ -4,6 +4,7 @@ pandas
 chromadb
 langchain
 langgraph
+langchain-community
 langchain-openai
 scikit-learn
 openpyxl
