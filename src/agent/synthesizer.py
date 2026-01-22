@@ -1,5 +1,4 @@
 from langchain_openai import ChatOpenAI
-from langchain_community.llms import FakeListLLM
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from src.agent.state import AgentState
@@ -56,15 +55,11 @@ Be concise but thorough. Focus on safety implications."""),
         chain = prompt | self.llm | StrOutputParser()
         
         try:
-            # If chain is LLM (Mock), invoke with prompt string or simple input
-            if isinstance(chain, FakeListLLM):
-                report = chain.invoke("dummy prompt")
-            else:
-                report = chain.invoke({
-                    "input_report": state['input_report'],
-                    "entities": state['extracted_entities'],
-                    "findings": state['findings']
-                })
+            report = chain.invoke({
+                "input_report": state['input_report'],
+                "entities": state['extracted_entities'],
+                "findings": state['findings']
+            })
         except Exception as e:
             report = f"Failed to generate report: {e}"
             
@@ -73,7 +68,7 @@ Be concise but thorough. Focus on safety implications."""),
             system_msg = prompt.messages[0].prompt.template
             user_msg = f"Input Report: {state['input_report']}\n\nExtracted Entities: {state['extracted_entities']}\n\nTool Findings: {state['findings']}"
             full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
-        except:
+        except (AttributeError, IndexError):
              full_prompt = "Prompt formatting failed."
 
         step_log = {

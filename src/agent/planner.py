@@ -54,7 +54,7 @@ Only return the JSON object, no additional text."""),
             if isinstance(content, str):
                 try:
                     entities = json.loads(content)
-                except:
+                except json.JSONDecodeError:
                     # Fallback if mock returns partial JSON or raw text
                     entities = {"RawExtraction": content}
             else:
@@ -69,7 +69,7 @@ Only return the JSON object, no additional text."""),
             system_msg = prompt.messages[0].prompt.template
             user_msg = state['input_report']
             full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
-        except:
+        except (AttributeError, IndexError):
             full_prompt = f"Report: {state['input_report']}"
 
         step_log = {
