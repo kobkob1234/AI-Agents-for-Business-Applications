@@ -28,6 +28,7 @@ class ReActController:
             print("WARNING: OPENAI_API_KEY not found. Using SimpleMockLLM (Generic).")
             self.llm = SimpleMockLLM()
 
+        self.max_steps = int(os.environ.get("MAX_REACT_STEPS", 6))
         self.decision_parser = JsonOutputParser()
         self.decision_prompt = self._build_decision_prompt()
         self.deep_analysis_prompt = self._build_deep_analysis_prompt()
@@ -176,14 +177,15 @@ Only return the JSON object, no additional text."""),
             "tool_history": state.get("tool_history", []),
             "tool_specs": self.tool_specs,
             "step_count": state.get("step_count", 0),
-            "max_steps": state.get("max_steps", 6)
+            "max_steps": state.get("max_steps", self.max_steps)
         }
 
         chain = self.decision_prompt | self.llm | self.decision_parser
 
         try:
             decision = chain.invoke(prompt_vars)
-        except Exception:
+        except Exception as e:
+            print(f"Decision parse failed: {e}")
             decision = self._fallback_decision(state)
 
         decision = self._normalize_decision(decision, state)
@@ -199,7 +201,7 @@ Only return the JSON object, no additional text."""),
     def route_decision(self, state: AgentState):
         decision = state.get("react_decision", {})
         step_count = state.get("step_count", 0)
-        max_steps = state.get("max_steps", 6)
+        max_steps = state.get("max_steps", self.max_steps)
 
         if step_count >= max_steps:
             return "final"
@@ -213,7 +215,10 @@ Only return the JSON object, no additional text."""),
         print("--- ReAct Action ---")
         decision = state.get("react_decision", {})
         action = decision.get("action", "")
-        action_input = decision.get("action_input", {}) or {}
+        action = decision.get("action", "")
+        action_input = decision.get("action_input", {})
+        if not isinstance(action_input, dict):
+            action_input = {}
 
         findings = list(state.get("findings", []))
         tool_history = list(state.get("tool_history", []))
@@ -225,7 +230,10 @@ Only return the JSON object, no additional text."""),
             query = action_input.get("query") or self._build_semantic_query(
                 state.get("extracted_entities", {}), state.get("input_report", "")
             )
-            k = int(action_input.get("k", 5))
+            try:
+                k = int(action_input.get("k", 5))
+            except (ValueError, TypeError):
+                k = 5
             results = self.tools["semantic_search"].search(query, k=k)
             observation = self._summarize_semantic_results(results)
             response_payload = {"query": query, "results": observation}
@@ -233,11 +241,17 @@ Only return the JSON object, no additional text."""),
 
         elif action == "structured_filter":
             filters = self._build_filters(action_input, state.get("extracted_entities", {}))
-            df_res = self.tools["filtering"].filter_data(filters) if filters else self.tools["filtering"].df.copy()
+            if filters:
+                df_res = self.tools["filtering"].filter_data(filters)
+                msg_suffix = ""
+            else:
+                df_res = self.tools["filtering"].df.head(100)
+                msg_suffix = " (No filters provided, showing top 100 sample. Please filter by make_model or location.)"
+            
             df_context = df_res
             observation = self._summarize_df(df_res)
             response_payload = {"filters": filters, "summary": observation}
-            findings.append(f"Structured Filter: {observation.get('count', 0)} matching records.")
+            findings.append(f"Structured Filter: {observation.get('count', 0)} matching records{msg_suffix}.")
 
         elif action == "trend_analyzer":
             use_filtered = action_input.get("use_filtered", True)
@@ -413,6 +427,11 @@ Only return the JSON object, no additional text."""),
             return decision
 
         if decision["decision"] == "act":
+            if decision["action"] == "final":
+                 decision["decision"] = "final"
+                 decision["action"] = ""
+                 return self._normalize_decision(decision, state)
+            
             if decision["action"] not in self.tool_names:
                 return self._fallback_decision(state)
 
