@@ -58,7 +58,6 @@ class ASIAgent:
             "messages": [],
             "findings": [],
             "extracted_entities": {},
-            "plan": [],
             "steps_trace": [],
             "react_steps": [],
             "react_decision": {},

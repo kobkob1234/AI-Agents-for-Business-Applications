@@ -343,15 +343,23 @@ Only return the JSON object, no additional text."""),
         return " ".join(query_parts) if query_parts else input_report[:200]
 
     def _build_filters(self, action_input: Dict[str, Any], entities: Dict[str, Any]) -> Dict[str, Any]:
+        def is_valid_filter(val: Any) -> bool:
+            """Check if a value is a valid (non-placeholder) filter value."""
+            if val is None:
+                return False
+            val_str = str(val).strip().lower()
+            placeholders = ["unknown", "unknown aircraft", "unknown location", "n/a", "none", ""]
+            return val_str not in placeholders
+        
         filters = {}
         make_model = action_input.get("make_model") or entities.get("Aircraft Model")
         location = action_input.get("location") or entities.get("Location")
         date_start = action_input.get("date_start")
         date_end = action_input.get("date_end")
 
-        if make_model and str(make_model).strip():
+        if is_valid_filter(make_model):
             filters["Make_Model"] = make_model
-        if location and str(location).strip():
+        if is_valid_filter(location):
             filters["Airport"] = location
         if date_start:
             filters["Date_Start"] = date_start
