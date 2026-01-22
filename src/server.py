@@ -56,7 +56,7 @@ async def team_info():
     Returns student details.
     """
     return {
-        "group_batch_order_number": "BATCH_ORDER_PLACEHOLDER",
+        "group_batch_order_number": "1_11",
         "team_name": "ASI Team",
         "students": [
             { "name": "Kobi Amit", "email": "kobiamit@campus.technion.ac.il" },
