@@ -5,6 +5,13 @@ class StructuredFilter:
     def __init__(self, df: pd.DataFrame):
         self.df = df
         
+    def _get_column(self, df: pd.DataFrame, *possible_names: str) -> str:
+        """Find the first matching column name from possible options."""
+        for name in possible_names:
+            if name in df.columns:
+                return name
+        return possible_names[0]  # Fallback to first option
+        
     def filter_data(self, filters: Dict[str, Any]) -> pd.DataFrame:
         """
         Filters the dataset based on structured criteria.
@@ -23,13 +30,16 @@ class StructuredFilter:
             if not value: continue
             
             if key == 'Make_Model':
-                # 'Make Model Name'
-                result = result[result['Make Model Name'].astype(str).str.contains(value, case=False, na=False)]
+                # Support both 'Make Model Name' and 'make_model_name'
+                col = self._get_column(result, 'Make Model Name', 'make_model_name', 'Make_Model_Name')
+                if col in result.columns:
+                    result = result[result[col].astype(str).str.contains(value, case=False, na=False)]
                 
             elif key == 'Airport':
-                # 'Locale Reference' or 'State Reference' or 'Location'
-                # Let's search 'Locale Reference' (e.g. SAN)
-                result = result[result['Locale Reference'].astype(str).str.contains(value, case=False, na=False)]
+                # Support both 'Locale Reference' and 'locale_reference'
+                col = self._get_column(result, 'Locale Reference', 'locale_reference', 'Locale_Reference')
+                if col in result.columns:
+                    result = result[result[col].astype(str).str.contains(value, case=False, na=False)]
                 
             elif key == 'Date_Start':
                 if 'Event_Date' in result.columns:

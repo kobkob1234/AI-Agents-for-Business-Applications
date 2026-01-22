@@ -138,6 +138,11 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         # ASRS Dates are YYYYMM (int or str)
         # Convert to datetime (use 1st of month)
         df['Event_Date'] = pd.to_datetime(df['Date'].astype(str), format='%Y%m', errors='coerce')
+        
+        # Log warning if any dates failed to parse
+        invalid_dates = df['Event_Date'].isna().sum()
+        if invalid_dates > 0:
+            print(f"Warning: {invalid_dates} rows had invalid dates (coerced to NaT)")
     
     return df
 
