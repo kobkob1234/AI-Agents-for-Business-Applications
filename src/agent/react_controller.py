@@ -28,7 +28,10 @@ class ReActController:
             print("WARNING: OPENAI_API_KEY not found. Using SimpleMockLLM (Generic).")
             self.llm = SimpleMockLLM()
 
-        self.max_steps = int(os.environ.get("MAX_REACT_STEPS", 6))
+        try:
+            self.max_steps = int(os.environ.get("MAX_REACT_STEPS", 6))
+        except (ValueError, TypeError):
+            self.max_steps = 6
         self.decision_parser = JsonOutputParser()
         self.decision_prompt = self._build_decision_prompt()
         self.deep_analysis_prompt = self._build_deep_analysis_prompt()
@@ -215,7 +218,6 @@ Only return the JSON object, no additional text."""),
         print("--- ReAct Action ---")
         decision = state.get("react_decision", {})
         action = decision.get("action", "")
-        action = decision.get("action", "")
         action_input = decision.get("action_input", {})
         if not isinstance(action_input, dict):
             action_input = {}
@@ -243,15 +245,27 @@ Only return the JSON object, no additional text."""),
             filters = self._build_filters(action_input, state.get("extracted_entities", {}))
             if filters:
                 df_res = self.tools["filtering"].filter_data(filters)
+                df_context = df_res
                 msg_suffix = ""
+                observation = self._summarize_df(df_res)
             else:
-                df_res = self.tools["filtering"].df.head(100)
-                msg_suffix = " (No filters provided, showing top 100 sample. Please filter by make_model or location.)"
+                # No filters: keep FULL context for downstream tools (e.g. Trend Analyzer)
+                # but only show a sample in the observation to the LLM.
+                df_res = self.tools["filtering"].df
+                df_context = df_res
+                sample_df = df_res.head(100)
+                summary = self._summarize_df(sample_df)
+                # Overwrite count to be explicit about the difference
+                observation = {
+                    "count": f"{len(df_res)} (full dataset)",
+                    "sample_preview_count": 100,
+                    "columns": summary["columns"],
+                    "top_operators": summary.get("top_operators", {})
+                }
+                msg_suffix = " (No filters provided. Context set to full dataset. Showing top 100 sample in observation.)"
             
-            df_context = df_res
-            observation = self._summarize_df(df_res)
             response_payload = {"filters": filters, "summary": observation}
-            findings.append(f"Structured Filter: {observation.get('count', 0)} matching records{msg_suffix}.")
+            findings.append(f"Structured Filter: {len(df_res)} records available{msg_suffix}.")
 
         elif action == "trend_analyzer":
             use_filtered = action_input.get("use_filtered", True)

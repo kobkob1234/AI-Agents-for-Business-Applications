@@ -65,7 +65,7 @@ class ASIAgent:
             "tool_history": [],
             "df_context": None,
             "step_count": 0,
-            "max_steps": 6,
+            "max_steps": self.react.max_steps,
             "last_observation": None
         }
         return self.workflow.invoke(initial_state)
