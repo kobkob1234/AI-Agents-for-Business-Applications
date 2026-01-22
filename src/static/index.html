@@ -441,14 +441,19 @@
         /* Live Reasoning Panel Styles */
         .live-step {
             display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            margin-bottom: 8px;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 6px;
+            margin-bottom: 4px;
             border-left: 3px solid var(--card-border);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .live-step:hover {
+            background: rgba(0, 0, 0, 0.25);
         }
 
         .live-step.complete {
@@ -473,25 +478,47 @@
         }
 
         .live-step-icon {
-            font-size: 16px;
-            min-width: 20px;
+            font-size: 14px;
+            min-width: 18px;
         }
 
         .live-step-content {
             flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .live-step-title {
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-primary);
         }
 
+        .live-step-arrow {
+            font-size: 10px;
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+        }
+
+        .live-step.expanded .live-step-arrow {
+            transform: rotate(180deg);
+        }
+
         .live-step-detail {
+            display: none;
             font-size: 12px;
             color: var(--text-secondary);
-            margin-top: 4px;
+            padding: 8px 12px 8px 40px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 0 0 6px 6px;
+            margin-top: -4px;
+            margin-bottom: 4px;
             word-break: break-word;
+        }
+
+        .live-step-detail.visible {
+            display: block;
         }
 
         #livePanelContent.collapsed {
@@ -795,20 +822,43 @@
                     prevRunning.querySelector('.live-step-icon').textContent = '✅';
                 }
 
-                // Add new step
+                // Create step ID for linking header and detail
+                const stepId = 'live-step-' + count;
+
+                // Add header row (always visible)
                 const stepEl = document.createElement('div');
                 stepEl.className = 'live-step ' + (data.status === 'complete' ? 'complete' : 'running');
+                stepEl.setAttribute('data-step-id', stepId);
+                stepEl.onclick = () => toggleLiveStep(stepId);
                 stepEl.innerHTML = `
                     <span class="live-step-icon">${data.status === 'complete' ? '✅' : '🔄'}</span>
                     <div class="live-step-content">
-                        <div class="live-step-title">${data.step}</div>
-                        <div class="live-step-detail">${data.detail || ''}</div>
+                        <span class="live-step-title">${data.step}</span>
+                        <span class="live-step-arrow">▼</span>
                     </div>
                 `;
                 container.appendChild(stepEl);
-                container.scrollTop = container.scrollHeight;
 
+                // Add detail row (collapsible - hidden by default)
+                if (data.detail) {
+                    const detailEl = document.createElement('div');
+                    detailEl.className = 'live-step-detail';
+                    detailEl.id = stepId + '-detail';
+                    detailEl.textContent = data.detail;
+                    container.appendChild(detailEl);
+                }
+
+                container.scrollTop = container.scrollHeight;
                 counterEl.textContent = `Step ${count}`;
+            }
+        }
+
+        function toggleLiveStep(stepId) {
+            const stepEl = document.querySelector(`[data-step-id="${stepId}"]`);
+            const detailEl = document.getElementById(stepId + '-detail');
+            if (stepEl && detailEl) {
+                stepEl.classList.toggle('expanded');
+                detailEl.classList.toggle('visible');
             }
         }
 
