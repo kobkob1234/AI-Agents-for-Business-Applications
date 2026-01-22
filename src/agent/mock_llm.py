@@ -39,7 +39,9 @@ class SimpleMockLLM(LLM):
             
         # Heuristic: Look for 3-letter airport codes
         loc_match = re.search(r'\b([A-Z]{3})\b', prompt)
-        if loc_match and loc_match.group(1) not in ["THE", "AND", "FOR"]:
+        # Exclude common words and aircraft model parts
+        excluded = ["THE", "AND", "FOR", "MAX", "NEO", "JET", "AIR", "FAA", "ATC", "VFR", "IFR", "GPS", "ILS", "RCA"]
+        if loc_match and loc_match.group(1) not in excluded:
             entities["Location"] = loc_match.group(1)
         else:
             entities["Location"] = "Unknown Location"

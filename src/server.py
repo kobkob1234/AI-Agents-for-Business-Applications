@@ -25,6 +25,16 @@ class ExecuteResponse(BaseModel):
 # --- App Init ---
 app = FastAPI()
 
+# Add CORS middleware for web deployment
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for course project
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Mount Static Files (Frontend)
 # We ensure the directory exists first
 if not os.path.exists("src/static"):
