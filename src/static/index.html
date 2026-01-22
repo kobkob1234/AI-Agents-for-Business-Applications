@@ -561,16 +561,22 @@
                 <div class="error-msg" id="errorMsg"></div>
             </div>
 
-            <!-- Live Reasoning Panel -->
+            <!-- Live Reasoning Panel (Single Window Hybrid) -->
             <div class="card" id="livePanel" style="display: none;">
-                <div class="card-title" style="cursor: pointer;" onclick="toggleLivePanel()">
+                <div class="card-title">
                     <span>🔄 Live Reasoning</span>
                     <span id="stepCounter"
-                        style="margin-left: 10px; font-size: 12px; color: var(--accent-cyan);"></span>
-                    <span id="livePanelArrow" style="margin-left: auto;">▼</span>
+                        style="margin-left: auto; font-size: 14px; color: var(--accent-cyan);"></span>
                 </div>
-                <div id="livePanelContent">
-                    <div id="liveSteps" style="max-height: 300px; overflow-y: auto;"></div>
+                <div id="liveCurrentStep"
+                    style="display: flex; align-items: center; gap: 12px; padding: 16px; background: rgba(0, 212, 255, 0.1); border-radius: 8px; border-left: 3px solid var(--accent-cyan);">
+                    <span id="liveIcon" style="font-size: 20px;">🔄</span>
+                    <div style="flex: 1;">
+                        <div id="liveStepName" style="font-weight: 600; font-size: 15px; color: var(--text-primary);">
+                            Initializing...</div>
+                        <div id="liveStepDetail"
+                            style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -701,7 +707,9 @@
 
             const runBtn = document.getElementById('runBtn');
             const livePanel = document.getElementById('livePanel');
-            const liveSteps = document.getElementById('liveSteps');
+            const liveStepName = document.getElementById('liveStepName');
+            const liveStepDetail = document.getElementById('liveStepDetail');
+            const liveIcon = document.getElementById('liveIcon');
             const stepCounter = document.getElementById('stepCounter');
             const output = document.getElementById('output');
             const errorMsg = document.getElementById('errorMsg');
@@ -712,7 +720,9 @@
             // Reset UI
             runBtn.disabled = true;
             livePanel.style.display = 'block';
-            liveSteps.innerHTML = '';
+            liveStepName.textContent = 'Initializing...';
+            liveStepDetail.textContent = '';
+            liveIcon.textContent = '🔄';
             stepCounter.textContent = '';
             output.style.display = 'none';
             errorMsg.style.display = 'none';
@@ -747,7 +757,7 @@
                         if (line.startsWith('data: ')) {
                             try {
                                 const data = JSON.parse(line.slice(6));
-                                handleSSEEvent(data, liveSteps, stepCounter, ++stepCount);
+                                handleSSEEvent(data, liveStepName, liveStepDetail, liveIcon, stepCounter, ++stepCount);
 
                                 if (data.type === 'result') {
                                     finalReport.textContent = data.response;
@@ -812,53 +822,13 @@
             }
         }
 
-        function handleSSEEvent(data, container, counterEl, count) {
+        function handleSSEEvent(data, nameEl, detailEl, iconEl, counterEl, count) {
             if (data.type === 'step') {
-                // Mark previous running step as complete
-                const prevRunning = container.querySelector('.live-step.running');
-                if (prevRunning) {
-                    prevRunning.classList.remove('running');
-                    prevRunning.classList.add('complete');
-                    prevRunning.querySelector('.live-step-icon').textContent = '✅';
-                }
-
-                // Create step ID for linking header and detail
-                const stepId = 'live-step-' + count;
-
-                // Add header row (always visible)
-                const stepEl = document.createElement('div');
-                stepEl.className = 'live-step ' + (data.status === 'complete' ? 'complete' : 'running');
-                stepEl.setAttribute('data-step-id', stepId);
-                stepEl.onclick = () => toggleLiveStep(stepId);
-                stepEl.innerHTML = `
-                    <span class="live-step-icon">${data.status === 'complete' ? '✅' : '🔄'}</span>
-                    <div class="live-step-content">
-                        <span class="live-step-title">${data.step}</span>
-                        <span class="live-step-arrow">▼</span>
-                    </div>
-                `;
-                container.appendChild(stepEl);
-
-                // Add detail row (collapsible - hidden by default)
-                if (data.detail) {
-                    const detailEl = document.createElement('div');
-                    detailEl.className = 'live-step-detail';
-                    detailEl.id = stepId + '-detail';
-                    detailEl.textContent = data.detail;
-                    container.appendChild(detailEl);
-                }
-
-                container.scrollTop = container.scrollHeight;
+                // Update single window in-place
+                nameEl.textContent = data.step;
+                detailEl.textContent = data.detail || '';
+                iconEl.textContent = '🔄';
                 counterEl.textContent = `Step ${count}`;
-            }
-        }
-
-        function toggleLiveStep(stepId) {
-            const stepEl = document.querySelector(`[data-step-id="${stepId}"]`);
-            const detailEl = document.getElementById(stepId + '-detail');
-            if (stepEl && detailEl) {
-                stepEl.classList.toggle('expanded');
-                detailEl.classList.toggle('visible');
             }
         }
 
