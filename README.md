@@ -6,8 +6,8 @@ An intelligent autonomous agent designed to investigate aviation safety reports 
 
 ## 🌟 Features
 
-*   **Autonomous Investigation**: A 5-stage pipeline (Entity Extraction → Search → Cross-Ref → Analysis → Report).
-*   **ReAct Architecture**: Uses dynamic planning and tool execution.
+*   **Autonomous Investigation**: A dynamic ReAct loop (Decide → Act → Observe) ensures thorough investigation.
+*   **True Reasoning**: The agent dynamically selects tools and reasons about findings at every step.
 *   **Semantic Search**: Retrieves similar historical incidents using **Pinecone** / **ChromaDB**.
 *   **Trend Analysis**: Detects anomaly patterns in incident frequency over time.
 *   **Execution Tracing**: Full visibility into the agent's "thought process" (steps, prompts, responses).

@@ -1,4 +1,4 @@
-from typing import TypedDict, Annotated, List, Union, Dict, Any
+from typing import TypedDict, Annotated, List, Dict, Any
 import operator
 from langchain_core.messages import BaseMessage
 
@@ -7,12 +7,27 @@ class StepLog(TypedDict):
     prompt: Any
     response: Any
 
+class ReActStep(TypedDict):
+    step: int
+    reasoning_summary: str
+    action: str
+    action_input: Dict[str, Any]
+    observation: Any
+
 class AgentState(TypedDict):
     input_report: str
-    extracted_entities: dict
+    extracted_entities: Dict[str, Any]
     plan: List[str]
     messages: Annotated[List[BaseMessage], operator.add]
     findings: List[str]
     final_report: str
-    # Add steps_trace to track API requirements
     steps_trace: Annotated[List[StepLog], operator.add]
+
+    # ReAct-specific fields
+    react_steps: Annotated[List[ReActStep], operator.add]
+    react_decision: Dict[str, Any]
+    tool_history: List[str]
+    df_context: Any
+    step_count: int
+    max_steps: int
+    last_observation: Any
