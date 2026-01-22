@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Generator
 import os
+import json
 import uvicorn
 from src.agent.graph import ASIAgent
 
@@ -176,6 +177,49 @@ async def execute(input_data: ExecuteInput):
             response=None,
             steps=[]
         )
+
+@app.post("/api/execute_stream")
+async def execute_stream(input_data: ExecuteInput):
+    """
+    SSE streaming endpoint for real-time chain-of-thought updates.
+    Yields events as the agent processes each ReAct step.
+    """
+    def stream_generator() -> Generator[str, None, None]:
+        global agent
+        if not agent:
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Agent not initialized'})}\n\n"
+            return
+        
+        import time
+        from src.utils.supabase_manager import supabase_manager
+        
+        start_time = time.time()
+        
+        try:
+            # Stream agent execution
+            for event in agent.run_streaming(input_data.prompt):
+                yield f"data: {json.dumps(event)}\n\n"
+            
+            # Get final state for logging
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Signal completion
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            
+        except Exception as e:
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            print(f"Streaming error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        stream_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
+        }
+    )
 
 if __name__ == "__main__":
     uvicorn.run("src.server:app", host="0.0.0.0", port=8000, reload=True)

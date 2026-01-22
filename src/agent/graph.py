@@ -68,3 +68,105 @@ class ASIAgent:
             "last_observation": None
         }
         return self.workflow.invoke(initial_state)
+
+    def run_streaming(self, input_report: str):
+        """
+        Generator that yields SSE events for each step of the ReAct loop.
+        Used for real-time chain-of-thought streaming.
+        """
+        initial_state = {
+            "input_report": input_report,
+            "messages": [],
+            "findings": [],
+            "extracted_entities": {},
+            "steps_trace": [],
+            "react_steps": [],
+            "react_decision": {},
+            "tool_history": [],
+            "df_context": None,
+            "step_count": 0,
+            "max_steps": self.react.max_steps,
+            "last_observation": None
+        }
+        
+        final_state = None
+        
+        # Stream through graph execution
+        for event in self.workflow.stream(initial_state):
+            # event is a dict with node_name -> output
+            for node_name, node_output in event.items():
+                # Create SSE event based on node type
+                if node_name == "extractor":
+                    entities = node_output.get("extracted_entities", {})
+                    yield {
+                        "type": "step",
+                        "step": "Entity Extraction",
+                        "status": "complete",
+                        "detail": f"Extracted: {', '.join(str(v) for v in entities.values() if v and str(v).lower() not in ['unknown', 'unknown aircraft', 'unknown location'])[:100]}"
+                    }
+                
+                elif node_name == "react_decider":
+                    decision = node_output.get("react_decision", {})
+                    action = decision.get("action", "")
+                    reasoning = decision.get("reasoning_summary", "")[:100]
+                    if decision.get("decision") == "final":
+                        yield {
+                            "type": "step",
+                            "step": "ReAct Decision",
+                            "status": "complete",
+                            "detail": f"Decision: Finalize report"
+                        }
+                    else:
+                        yield {
+                            "type": "step",
+                            "step": "ReAct Decision",
+                            "status": "complete",
+                            "detail": f"Next action: {action}"
+                        }
+                
+                elif node_name == "react_act":
+                    react_steps = node_output.get("react_steps", [])
+                    if react_steps:
+                        last_step = react_steps[-1]
+                        action = last_step.get("action", "")
+                        observation = last_step.get("observation", "")
+                        # Truncate observation for display
+                        if isinstance(observation, dict):
+                            obs_preview = str(observation)[:100]
+                        elif isinstance(observation, list):
+                            obs_preview = f"{len(observation)} items"
+                        else:
+                            obs_preview = str(observation)[:100]
+                        
+                        yield {
+                            "type": "step",
+                            "step": f"Tool: {action}",
+                            "status": "complete",
+                            "detail": obs_preview
+                        }
+                
+                elif node_name == "synthesizer":
+                    report = node_output.get("final_report", "")
+                    yield {
+                        "type": "step",
+                        "step": "Report Synthesis",
+                        "status": "complete",
+                        "detail": "Generating final RCA report..."
+                    }
+                    # Also yield the final results
+                    yield {
+                        "type": "result",
+                        "response": report,
+                        "steps": node_output.get("steps_trace", [])
+                    }
+                
+                # Update final_state
+                if final_state is None:
+                    final_state = node_output
+                else:
+                    final_state.update(node_output)
+        
+        # If we didn't get a result event, yield final state
+        if final_state and "final_report" in final_state:
+            pass  # Already yielded in synthesizer node
+

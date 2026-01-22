@@ -437,6 +437,66 @@
                 flex-wrap: wrap;
             }
         }
+
+        /* Live Reasoning Panel Styles */
+        .live-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid var(--card-border);
+            transition: all 0.3s ease;
+        }
+
+        .live-step.complete {
+            border-left-color: var(--accent-green);
+        }
+
+        .live-step.running {
+            border-left-color: var(--accent-cyan);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .live-step-icon {
+            font-size: 16px;
+            min-width: 20px;
+        }
+
+        .live-step-content {
+            flex: 1;
+        }
+
+        .live-step-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .live-step-detail {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            word-break: break-word;
+        }
+
+        #livePanelContent.collapsed {
+            display: none;
+        }
     </style>
 </head>
 
@@ -474,10 +534,22 @@
                 <div class="error-msg" id="errorMsg"></div>
             </div>
 
-            <div class="loader" id="loader">
+            <!-- Live Reasoning Panel -->
+            <div class="card" id="livePanel" style="display: none;">
+                <div class="card-title" style="cursor: pointer;" onclick="toggleLivePanel()">
+                    <span>🔄 Live Reasoning</span>
+                    <span id="stepCounter"
+                        style="margin-left: 10px; font-size: 12px; color: var(--accent-cyan);"></span>
+                    <span id="livePanelArrow" style="margin-left: auto;">▼</span>
+                </div>
+                <div id="livePanelContent">
+                    <div id="liveSteps" style="max-height: 300px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <div class="loader" id="loader" style="display: none;">
                 <div class="loader-spinner"></div>
-                <p class="loader-text">Analyzing report... Extracting entities, searching historical data,
-                    cross-referencing patterns...</p>
+                <p class="loader-text">Finalizing analysis...</p>
             </div>
 
             <div id="output">
@@ -601,43 +673,79 @@
             }
 
             const runBtn = document.getElementById('runBtn');
-            const loader = document.getElementById('loader');
+            const livePanel = document.getElementById('livePanel');
+            const liveSteps = document.getElementById('liveSteps');
+            const stepCounter = document.getElementById('stepCounter');
             const output = document.getElementById('output');
             const errorMsg = document.getElementById('errorMsg');
             const finalReport = document.getElementById('finalReport');
             const stepsContainer = document.getElementById('stepsContainer');
+            const loader = document.getElementById('loader');
 
+            // Reset UI
             runBtn.disabled = true;
-            loader.style.display = 'block';
+            livePanel.style.display = 'block';
+            liveSteps.innerHTML = '';
+            stepCounter.textContent = '';
             output.style.display = 'none';
             errorMsg.style.display = 'none';
             finalReport.textContent = '';
             stepsContainer.innerHTML = '';
+            loader.style.display = 'none';
+
+            let stepCount = 0;
+            let fullSteps = [];
 
             try {
-                const response = await fetch('/api/execute', {
+                // Use fetch with POST for SSE (EventSource only supports GET)
+                const response = await fetch('/api/execute_stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt })
                 });
 
-                let data;
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    data = await response.json();
-                } else {
-                    const text = await response.text();
-                    throw new Error(`Server returned ${response.status} ${response.statusText}: ${text.substring(0, 100)}...`);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                handleSSEEvent(data, liveSteps, stepCounter, ++stepCount);
+
+                                if (data.type === 'result') {
+                                    finalReport.textContent = data.response;
+                                    fullSteps = data.steps || [];
+                                }
+
+                                if (data.type === 'error') {
+                                    errorMsg.textContent = 'Error: ' + data.message;
+                                    errorMsg.style.display = 'block';
+                                }
+                            } catch (e) {
+                                console.error('Failed to parse SSE:', line, e);
+                            }
+                        }
+                    }
                 }
 
-                if (response.ok && data.status === 'ok') {
+                // Show final output
+                if (finalReport.textContent) {
                     output.style.display = 'block';
-                    finalReport.textContent = data.response;
 
-                    data.steps.forEach((step, index) => {
+                    // Render detailed execution trace
+                    fullSteps.forEach((step, index) => {
                         const stepEl = document.createElement('div');
                         stepEl.className = 'step';
-
                         stepEl.innerHTML = `
                             <div class="step-header" onclick="toggleStep(this.parentElement)">
                                 <div class="step-title">
@@ -660,21 +768,55 @@
                         stepsContainer.appendChild(stepEl);
                     });
 
-                    // Scroll to output
                     output.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                } else {
-                    errorMsg.textContent = "Error: " + (data.error || JSON.stringify(data) || "Unknown error occurred");
-                    errorMsg.style.display = 'block';
                 }
 
             } catch (err) {
-                errorMsg.textContent = "Detailed Error: " + err.message;
+                errorMsg.textContent = 'Connection Error: ' + err.message;
                 errorMsg.style.display = 'block';
-
             } finally {
                 runBtn.disabled = false;
-                loader.style.display = 'none';
+                // Mark all steps as complete
+                document.querySelectorAll('.live-step.running').forEach(el => {
+                    el.classList.remove('running');
+                    el.classList.add('complete');
+                    el.querySelector('.live-step-icon').textContent = '✅';
+                });
             }
+        }
+
+        function handleSSEEvent(data, container, counterEl, count) {
+            if (data.type === 'step') {
+                // Mark previous running step as complete
+                const prevRunning = container.querySelector('.live-step.running');
+                if (prevRunning) {
+                    prevRunning.classList.remove('running');
+                    prevRunning.classList.add('complete');
+                    prevRunning.querySelector('.live-step-icon').textContent = '✅';
+                }
+
+                // Add new step
+                const stepEl = document.createElement('div');
+                stepEl.className = 'live-step ' + (data.status === 'complete' ? 'complete' : 'running');
+                stepEl.innerHTML = `
+                    <span class="live-step-icon">${data.status === 'complete' ? '✅' : '🔄'}</span>
+                    <div class="live-step-content">
+                        <div class="live-step-title">${data.step}</div>
+                        <div class="live-step-detail">${data.detail || ''}</div>
+                    </div>
+                `;
+                container.appendChild(stepEl);
+                container.scrollTop = container.scrollHeight;
+
+                counterEl.textContent = `Step ${count}`;
+            }
+        }
+
+        function toggleLivePanel() {
+            const content = document.getElementById('livePanelContent');
+            const arrow = document.getElementById('livePanelArrow');
+            content.classList.toggle('collapsed');
+            arrow.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
         }
 
         function toggleStep(stepEl) {
