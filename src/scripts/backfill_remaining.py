@@ -110,7 +110,7 @@ def backfill_remaining():
                             "flight_phase": str(row.get('Flight Phase', '')),
                             "event_type": str(row.get('Event Type', '')),
                             "narrative": narrative[:10000],
-                            "raw_data": row.replace({float('nan'): None}).to_dict()
+                            # "raw_data": column dropped for optimization
                         })
                     except: continue
 

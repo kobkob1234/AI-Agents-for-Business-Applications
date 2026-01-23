@@ -79,7 +79,7 @@ def migrate_data():
                         "flight_phase": str(row.get('Flight Phase', '')),
                         "event_type": str(row.get('Event Type', '')),
                         "narrative": narrative[:10000], # Trucate huge narratives
-                        "raw_data": row.replace({float('nan'): None}).to_dict()
+                        # "raw_data": column dropped for optimization
                     }
                     records.append(rec)
                 except Exception as e:
