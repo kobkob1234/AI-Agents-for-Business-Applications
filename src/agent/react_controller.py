@@ -298,8 +298,11 @@ Only return the JSON object, no additional text."""),
             "observation": observation
         }
 
+        # Use Title Case for module name to match Architecture Diagram (e.g. "Semantic Search")
+        module_name = action.replace("_", " ").title() if action else "Observation"
+        
         step_log = {
-            "module": f"ReAct Observation ({action})",
+            "module": module_name,
             "prompt": action_input,
             "response": response_payload
         }
