@@ -115,7 +115,7 @@ async def model_architecture():
         return JSONResponse(status_code=404, content={"error": "Architecture image not found. Please place 'architecture.png' in src/static/."})
 
 @app.post("/api/execute", response_model=ExecuteResponse)
-async def execute(input_data: ExecuteInput):
+def execute(input_data: ExecuteInput):
     global agent
     if not agent:
         raise HTTPException(status_code=500, detail="Agent not initialized")
@@ -173,7 +173,7 @@ async def execute(input_data: ExecuteInput):
         
         return ExecuteResponse(
             status="error",
-            error=str(e),
+            error="Internal processing error. Check logs for details.",
             response=None,
             steps=[]
         )
