@@ -278,9 +278,17 @@ Only return the JSON object, no additional text."""),
 
         elif action == "deep_analysis":
             focus = action_input.get("focus", "")
-            observation = self._deep_analysis(state, focus=focus)
+            result = self._deep_analysis(state, focus=focus)
+            observation = result.get("observation", "")
+            actual_prompt = result.get("actual_prompt", "")
+            
+            # Use the actual prompt for the step log, but keep action_input for the tool history
             response_payload = {"analysis": observation}
             findings.append(f"Deep Analysis: {observation}")
+            
+            # Use the actual prompt in the step log for traceabilty
+            # We will override the 'prompt' field in step_log construction below
+            action_input_for_log = actual_prompt
 
         else:
             observation = f"Unknown action: {action}"
@@ -301,9 +309,13 @@ Only return the JSON object, no additional text."""),
         # Use Title Case for module name to match Architecture Diagram (e.g. "Semantic Search")
         module_name = action.replace("_", " ").title() if action else "Observation"
         
+        # If we have a specific prompt to log (like from Deep Analysis), use it.
+        # Otherwise use the structured action_input.
+        prompt_to_log = locals().get("action_input_for_log", action_input)
+        
         step_log = {
             "module": module_name,
-            "prompt": action_input,
+            "prompt": prompt_to_log,
             "response": response_payload
         }
 
@@ -317,18 +329,34 @@ Only return the JSON object, no additional text."""),
             "last_observation": observation
         }
 
-    def _deep_analysis(self, state: AgentState, focus: str = "") -> str:
+    def _deep_analysis(self, state: AgentState, focus: str = "") -> Dict[str, str]:
         chain = self.deep_analysis_prompt | self.llm | StrOutputParser()
+        
+        # Prepare inputs to capture the prompt
+        inputs = {
+            "input_report": state.get("input_report", ""),
+            "entities": state.get("extracted_entities", {}),
+            "findings": state.get("findings", []),
+            "last_observation": state.get("last_observation", ""),
+            "focus": focus
+        }
+        
         try:
-            return chain.invoke({
-                "input_report": state.get("input_report", ""),
-                "entities": state.get("extracted_entities", {}),
-                "findings": state.get("findings", []),
-                "last_observation": state.get("last_observation", ""),
-                "focus": focus
-            })
+            # Generate the actual prompt string for logging traceabilty
+            formatted_prompt = self.deep_analysis_prompt.format(**inputs)
+            
+            # Invoke LLM
+            observation = chain.invoke(inputs)
+            
+            return {
+                "observation": observation,
+                "actual_prompt": formatted_prompt
+            }
         except Exception as e:
-            return f"Deep analysis failed: {e}"
+            return {
+                "observation": f"Deep analysis failed: {e}",
+                "actual_prompt": "Prompt generation failed"
+            }
 
     def _build_semantic_query(self, entities: Dict[str, Any], input_report: str) -> str:
         def is_valid(val: Any) -> bool:

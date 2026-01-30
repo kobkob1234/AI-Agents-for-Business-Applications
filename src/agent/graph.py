@@ -90,6 +90,7 @@ class ASIAgent:
         }
         
         final_state = None
+        all_steps = []
         
         # Stream through graph execution
         for event in self.workflow.stream(initial_state):
@@ -98,6 +99,10 @@ class ASIAgent:
                 # Create SSE event based on node type
                 if node_name == "extractor":
                     entities = node_output.get("extracted_entities", {})
+                    # Add to full trace
+                    new_trace_logs = node_output.get("steps_trace", [])
+                    all_steps.extend(new_trace_logs)
+                    
                     yield {
                         "type": "step",
                         "step": "Entity Extraction",
@@ -109,6 +114,11 @@ class ASIAgent:
                     decision = node_output.get("react_decision", {})
                     action = decision.get("action", "")
                     reasoning = decision.get("reasoning_summary", "")[:100]
+                    
+                    # Add to full trace
+                    new_trace_logs = node_output.get("steps_trace", [])
+                    all_steps.extend(new_trace_logs)
+                    
                     if decision.get("decision") == "final":
                         yield {
                             "type": "step",
@@ -130,6 +140,12 @@ class ASIAgent:
                         last_step = react_steps[-1]
                         action = last_step.get("action", "")
                         observation = last_step.get("observation", "")
+                        
+                        # Add to full trace
+                        # Note: `steps_trace` in node_output contains the formal step log
+                        new_trace_logs = node_output.get("steps_trace", [])
+                        all_steps.extend(new_trace_logs)
+                        
                         # Truncate observation for display
                         if isinstance(observation, dict):
                             obs_preview = str(observation)[:100]
@@ -147,17 +163,22 @@ class ASIAgent:
                 
                 elif node_name == "synthesizer":
                     report = node_output.get("final_report", "")
+                    
+                    # Add final step log
+                    new_trace_logs = node_output.get("steps_trace", [])
+                    all_steps.extend(new_trace_logs)
+                    
                     yield {
                         "type": "step",
                         "step": "Report Synthesis",
                         "status": "complete",
                         "detail": "Generating final RCA report..."
                     }
-                    # Also yield the final results
+                    # Also yield the final results with FULL trace
                     yield {
                         "type": "result",
                         "response": report,
-                        "steps": node_output.get("steps_trace", [])
+                        "steps": all_steps
                     }
                 
                 # Update final_state
@@ -165,6 +186,7 @@ class ASIAgent:
                     final_state = node_output
                 else:
                     final_state.update(node_output)
+
         
         # If we didn't get a result event, yield final state
         if final_state and "final_report" in final_state:

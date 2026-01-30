@@ -93,7 +93,7 @@ async def agent_info():
                     { "module": "Entity Extraction", "prompt": "Extract aircraft model...", "response": "Captured: B737 MAX 8, SAN, Descent" },
                     { "module": "Semantic Search", "prompt": "Query vector database...", "response": "Found 5 similar cases" },
                     { "module": "Structured Filter", "prompt": "Filter by Aircraft...", "response": "Filtered subset: 23 records" },
-                    { "module": "Cross-Referencing", "prompt": "Analyze operator...", "response": "Top Operator: Southwest Airlines" },
+                    { "module": "Structured Filter", "prompt": "Analyze operator...", "response": "Top Operator: Southwest Airlines" },
                     { "module": "Trend Analyzer", "prompt": "Detect anomalies...", "response": "Stable reporting pattern" },
                     { "module": "Deep Analysis", "prompt": "Compare with manuals...", "response": "Confirmed recurrent issue" },
                     { "module": "Report Generation", "prompt": "Synthesize findings...", "response": "Generated RCA Report" }
@@ -171,9 +171,10 @@ def execute(input_data: ExecuteInput):
             status="error"
         )
         
+        # Return structured error response instead of raising HTTPException
         return ExecuteResponse(
             status="error",
-            error="Internal processing error. Check logs for details.",
+            error=str(e),
             response=None,
             steps=[]
         )

@@ -719,68 +719,43 @@
 
             // Reset UI
             runBtn.disabled = true;
-            livePanel.style.display = 'block';
-            liveStepName.textContent = 'Initializing...';
-            liveStepDetail.textContent = '';
-            liveIcon.textContent = '🔄';
+            livePanel.style.display = 'block'; // Keep panel as "Processing Status"
+            liveStepName.textContent = 'Processing...';
+            liveStepDetail.textContent = 'This may take up to 60 seconds (Analyzing...)';
+            liveIcon.textContent = '⏳';
+            liveIcon.style.animation = 'spin 1.5s linear infinite';
             stepCounter.textContent = '';
             output.style.display = 'none';
             errorMsg.style.display = 'none';
             finalReport.textContent = '';
             stepsContainer.innerHTML = '';
-            loader.style.display = 'none';
-
-            let stepCount = 0;
-            let fullSteps = [];
+            loader.style.display = 'block';
 
             try {
-                // Use fetch with POST for SSE (EventSource only supports GET)
-                const response = await fetch('/api/execute_stream', {
+                // COMPLIANCE FIX: Call /api/execute (Validation requirement)
+                // This is a blocking call that returns the full result at once.
+                const response = await fetch('/api/execute', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt: prompt })
                 });
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop(); // Keep incomplete line in buffer
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                handleSSEEvent(data, liveStepName, liveStepDetail, liveIcon, stepCounter, ++stepCount);
-
-                                if (data.type === 'result') {
-                                    finalReport.textContent = data.response;
-                                    fullSteps = data.steps || [];
-                                }
-
-                                if (data.type === 'error') {
-                                    errorMsg.textContent = 'Error: ' + data.message;
-                                    errorMsg.style.display = 'block';
-                                }
-                            } catch (e) {
-                                console.error('Failed to parse SSE:', line, e);
-                            }
-                        }
-                    }
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status} ${response.statusText}`);
                 }
 
-                // Show final output
-                if (finalReport.textContent) {
-                    output.style.display = 'block';
+                const data = await response.json();
 
-                    // Render detailed execution trace
-                    fullSteps.forEach((step, index) => {
+                if (data.status === 'error') {
+                    throw new Error(data.error || 'Unknown error occurred');
+                }
+
+                // Render Results
+                finalReport.innerText = data.response; // Use innerText for safe rendering
+
+                // Render Trace
+                if (data.steps && data.steps.length > 0) {
+                    data.steps.forEach((step, index) => {
                         const stepEl = document.createElement('div');
                         stepEl.className = 'step';
                         stepEl.innerHTML = `
@@ -804,33 +779,51 @@
                         `;
                         stepsContainer.appendChild(stepEl);
                     });
-
-                    output.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
 
+                output.style.display = 'block';
+
+                // Update "Live" panel to done state
+                liveStepName.textContent = 'Analysis Complete';
+                liveStepDetail.textContent = 'View report below.';
+                liveIcon.textContent = '✅';
+                liveIcon.style.animation = 'none';
+
+                output.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
             } catch (err) {
-                errorMsg.textContent = 'Connection Error: ' + err.message;
+                console.error(err);
+                errorMsg.textContent = 'Error: ' + err.message;
                 errorMsg.style.display = 'block';
+
+                liveStepName.textContent = 'Failed';
+                liveStepDetail.textContent = 'See error message.';
+                liveIcon.textContent = '❌';
+                liveIcon.style.animation = 'none';
             } finally {
                 runBtn.disabled = false;
-                // Mark all steps as complete
-                document.querySelectorAll('.live-step.running').forEach(el => {
-                    el.classList.remove('running');
-                    el.classList.add('complete');
-                    el.querySelector('.live-step-icon').textContent = '✅';
-                });
+                loader.style.display = 'none';
             }
         }
 
-        function handleSSEEvent(data, nameEl, detailEl, iconEl, counterEl, count) {
-            if (data.type === 'step') {
-                // Update single window in-place
-                nameEl.textContent = data.step;
-                detailEl.textContent = data.detail || '';
-                iconEl.textContent = '🔄';
-                counterEl.textContent = `Step ${count}`;
-            }
+        // Helper functions
+        function toggleLivePanel() {
+            const content = document.getElementById('livePanelContent');
+            if (content) content.classList.toggle('collapsed');
         }
+
+        function toggleStep(stepEl) {
+            // Close others (optional user preference, but cleaner)
+            // document.querySelectorAll('.step.open').forEach(el => {
+            //     if (el !== stepEl) el.classList.remove('open');
+            // });
+            stepEl.classList.toggle('open');
+        }
+
+        /* 
+           Old SSE event handler removed for compliance.
+           Strictly using POST /api/execute.
+        */
 
         function toggleLivePanel() {
             const content = document.getElementById('livePanelContent');
