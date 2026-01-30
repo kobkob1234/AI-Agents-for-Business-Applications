@@ -91,6 +91,7 @@ class ASIAgent:
         
         final_state = None
         all_steps = []
+        last_entities = {}
         
         # Stream through graph execution
         for event in self.workflow.stream(initial_state):
@@ -99,13 +100,14 @@ class ASIAgent:
                 # Create SSE event based on node type
                 if node_name == "extractor":
                     entities = node_output.get("extracted_entities", {})
+                    last_entities = entities
                     # Add to full trace
                     new_trace_logs = node_output.get("steps_trace", [])
                     all_steps.extend(new_trace_logs)
                     
                     yield {
                         "type": "step",
-                        "step": "Entity Extraction",
+                        "step": "ENTITY EXTRACTION",
                         "status": "complete",
                         "detail": f"Extracted: {', '.join(str(v) for v in entities.values() if v and str(v).lower() not in ['unknown', 'unknown aircraft', 'unknown location'])[:100]}"
                     }
@@ -122,14 +124,14 @@ class ASIAgent:
                     if decision.get("decision") == "final":
                         yield {
                             "type": "step",
-                            "step": "ReAct Decision",
+                            "step": "REACT DECIDER",
                             "status": "complete",
                             "detail": f"Decision: Finalize report"
                         }
                     else:
                         yield {
                             "type": "step",
-                            "step": "ReAct Decision",
+                            "step": "REACT DECIDER",
                             "status": "complete",
                             "detail": f"Next action: {action}"
                         }
@@ -170,7 +172,7 @@ class ASIAgent:
                     
                     yield {
                         "type": "step",
-                        "step": "Report Synthesis",
+                        "step": "SYNTHESIZER",
                         "status": "complete",
                         "detail": "Generating final RCA report..."
                     }
@@ -178,7 +180,8 @@ class ASIAgent:
                     yield {
                         "type": "result",
                         "response": report,
-                        "steps": all_steps
+                        "steps": all_steps,
+                        "entities": last_entities
                     }
                 
                 # Update final_state
@@ -191,4 +194,3 @@ class ASIAgent:
         # If we didn't get a result event, yield final state
         if final_state and "final_report" in final_state:
             pass  # Already yielded in synthesizer node
-

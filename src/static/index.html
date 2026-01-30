@@ -806,32 +806,6 @@
             }
         }
 
-        // Helper functions
-        function toggleLivePanel() {
-            const content = document.getElementById('livePanelContent');
-            if (content) content.classList.toggle('collapsed');
-        }
-
-        function toggleStep(stepEl) {
-            // Close others (optional user preference, but cleaner)
-            // document.querySelectorAll('.step.open').forEach(el => {
-            //     if (el !== stepEl) el.classList.remove('open');
-            // });
-            stepEl.classList.toggle('open');
-        }
-
-        /* 
-           Old SSE event handler removed for compliance.
-           Strictly using POST /api/execute.
-        */
-
-        function toggleLivePanel() {
-            const content = document.getElementById('livePanelContent');
-            const arrow = document.getElementById('livePanelArrow');
-            content.classList.toggle('collapsed');
-            arrow.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
-        }
-
         function toggleStep(stepEl) {
             stepEl.classList.toggle('open');
         }

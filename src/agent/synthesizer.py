@@ -70,7 +70,7 @@ Be concise but thorough. Focus on safety implications."""),
             full_prompt = "Prompt formatting failed."
 
         step_log = {
-            "module": "Report Generation",
+            "module": "SYNTHESIZER",
             "prompt": full_prompt,
             "response": report
         }

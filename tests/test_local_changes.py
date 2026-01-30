@@ -33,10 +33,12 @@ def test_local_execute_happy_path():
     assert "description" in data
     assert "purpose" in data
     
-    # Check that "Cross-Referencing" was removed/fixed in the example
+    # Check that "Cross-Referencing" was removed and core modules match diagram labels
     steps_dump = str(data.get("prompt_examples", []))
     assert "Cross-Referencing" not in steps_dump
-    assert "Structured Filter" in steps_dump
+    assert "ENTITY EXTRACTION" in steps_dump
+    assert "REACT DECIDER" in steps_dump
+    assert "SYNTHESIZER" in steps_dump
 
 def test_execute_error_handling_structure():
     """

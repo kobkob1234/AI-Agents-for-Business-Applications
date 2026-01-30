@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict, Generator
 import os
 import json
@@ -21,7 +21,7 @@ class ExecuteResponse(BaseModel):
     status: str
     error: Optional[str] = None
     response: Optional[str] = None
-    steps: List[Step] = []
+    steps: List[Step] = Field(default_factory=list)
 
 # --- App Init ---
 app = FastAPI()
@@ -90,13 +90,10 @@ async def agent_info():
                 "prompt": "Location: SAN. Airplane: B737 MAX 8. Event: Descent. Narrative: Experiencing unstable approach and high sink rate due to wake turbulence from preceding A321.",
                 "full_response": "## Executive Summary\nThe reported incident involved a B737 MAX 8 experiencing unstable approach conditions at SAN during descent phase. The primary contributing factor appears to be wake turbulence from a preceding A321 aircraft.\n\n## Historical Corroboration\nSemantic search of the ASRS database identified 5 similar cases involving wake turbulence encounters during approach phase.\n\n## Trend Analysis\nAnalysis indicates stable reporting patterns for wake turbulence incidents, with mean monthly reports around 12-15 for B737 aircraft.\n\n## Cross-Reference Findings\nFiltered data shows 23 similar reports for B737 aircraft at SAN. Most common operator: Southwest Airlines.\n\n## Root Cause Assessment\nInsufficient separation from preceding heavier aircraft during approach phase.\n\n## Recommendations\n1. Review wake turbulence separation standards\n2. Enhance pilot awareness training for wake vortex encounters",
                 "steps": [
-                    { "module": "Entity Extraction", "prompt": "Extract aircraft model...", "response": "Captured: B737 MAX 8, SAN, Descent" },
-                    { "module": "Semantic Search", "prompt": "Query vector database...", "response": "Found 5 similar cases" },
-                    { "module": "Structured Filter", "prompt": "Filter by Aircraft...", "response": "Filtered subset: 23 records" },
-                    { "module": "Structured Filter", "prompt": "Analyze operator...", "response": "Top Operator: Southwest Airlines" },
-                    { "module": "Trend Analyzer", "prompt": "Detect anomalies...", "response": "Stable reporting pattern" },
-                    { "module": "Deep Analysis", "prompt": "Compare with manuals...", "response": "Confirmed recurrent issue" },
-                    { "module": "Report Generation", "prompt": "Synthesize findings...", "response": "Generated RCA Report" }
+                    { "module": "ENTITY EXTRACTION", "prompt": "Extract key entities from the report...", "response": "Captured: B737 MAX 8, SAN, Descent" },
+                    { "module": "REACT DECIDER", "prompt": "Decide next action based on findings...", "response": "Action: deep_analysis" },
+                    { "module": "DEEP ANALYSIS", "prompt": "LLM causal analysis prompt...", "response": "Confirmed recurrent issue" },
+                    { "module": "SYNTHESIZER", "prompt": "Synthesize findings...", "response": "Generated RCA Report" }
                 ]
             }
         ]
@@ -117,13 +114,27 @@ async def model_architecture():
 @app.post("/api/execute", response_model=ExecuteResponse)
 def execute(input_data: ExecuteInput):
     global agent
-    if not agent:
-        raise HTTPException(status_code=500, detail="Agent not initialized")
-    
     import time
     from src.utils.supabase_manager import supabase_manager
-    
+
     start_time = time.time()
+    if not agent:
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        # Log error to Supabase (if available)
+        supabase_manager.log_execution(
+            prompt=input_data.prompt,
+            entities={},
+            steps=[],
+            final_report=None,
+            execution_time_ms=execution_time_ms,
+            status="error"
+        )
+        return ExecuteResponse(
+            status="error",
+            error="Agent not initialized",
+            response=None,
+            steps=[]
+        )
     
     try:
         # Run agent
@@ -196,20 +207,42 @@ async def execute_stream(input_data: ExecuteInput):
         
         start_time = time.time()
         
+        final_payload = None
         try:
             # Stream agent execution
             for event in agent.run_streaming(input_data.prompt):
+                if event.get("type") == "result":
+                    final_payload = event
                 yield f"data: {json.dumps(event)}\n\n"
             
             # Get final state for logging
             execution_time_ms = int((time.time() - start_time) * 1000)
             
+            # Log final result to Supabase (if available)
+            if final_payload:
+                supabase_manager.log_execution(
+                    prompt=input_data.prompt,
+                    entities=final_payload.get("entities", {}),
+                    steps=final_payload.get("steps", []),
+                    final_report=final_payload.get("response"),
+                    execution_time_ms=execution_time_ms,
+                    status="completed"
+                )
+
             # Signal completion
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
             
         except Exception as e:
             execution_time_ms = int((time.time() - start_time) * 1000)
             print(f"Streaming error: {e}")
+            supabase_manager.log_execution(
+                prompt=input_data.prompt,
+                entities={},
+                steps=[],
+                final_report=None,
+                execution_time_ms=execution_time_ms,
+                status="error"
+            )
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
     
     return StreamingResponse(

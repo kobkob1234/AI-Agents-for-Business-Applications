@@ -160,7 +160,7 @@ def test_happy_path_rca(mock_agent_components):
              pytest.fail(f"Expected 'Falcon 7X' in response, but got: {data['response']}")
         
         assert len(data["steps"]) > 0
-        assert data["steps"][0]["module"] == "Entity Extraction"
+        assert data["steps"][0]["module"] == "ENTITY EXTRACTION"
 
 def test_domain_refusal(mock_agent_components):
     """

@@ -162,7 +162,7 @@ Only return the JSON object, no additional text."""),
             full_prompt = f"Report: {state['input_report']}"
 
         step_log = {
-            "module": "Entity Extraction",
+            "module": "ENTITY EXTRACTION",
             "prompt": full_prompt,
             "response": entities
         }
@@ -194,7 +194,7 @@ Only return the JSON object, no additional text."""),
         decision = self._normalize_decision(decision, state)
 
         step_log = {
-            "module": "ReAct Decision",
+            "module": "REACT DECIDER",
             "prompt": prompt_vars,
             "response": decision
         }
@@ -227,6 +227,7 @@ Only return the JSON object, no additional text."""),
         df_context = state.get("df_context")
         observation = None
         response_payload = None
+        step_log = None
 
         if action == "semantic_search":
             query = action_input.get("query") or self._build_semantic_query(
@@ -282,13 +283,14 @@ Only return the JSON object, no additional text."""),
             observation = result.get("observation", "")
             actual_prompt = result.get("actual_prompt", "")
             
-            # Use the actual prompt for the step log, but keep action_input for the tool history
             response_payload = {"analysis": observation}
             findings.append(f"Deep Analysis: {observation}")
-            
-            # Use the actual prompt in the step log for traceabilty
-            # We will override the 'prompt' field in step_log construction below
-            action_input_for_log = actual_prompt
+
+            step_log = {
+                "module": "DEEP ANALYSIS",
+                "prompt": actual_prompt,
+                "response": response_payload
+            }
 
         else:
             observation = f"Unknown action: {action}"
@@ -306,23 +308,12 @@ Only return the JSON object, no additional text."""),
             "observation": observation
         }
 
-        # Use Title Case for module name to match Architecture Diagram (e.g. "Semantic Search")
-        module_name = action.replace("_", " ").title() if action else "Observation"
-        
-        # If we have a specific prompt to log (like from Deep Analysis), use it.
-        # Otherwise use the structured action_input.
-        prompt_to_log = locals().get("action_input_for_log", action_input)
-        
-        step_log = {
-            "module": module_name,
-            "prompt": prompt_to_log,
-            "response": response_payload
-        }
+        steps_trace_update = [step_log] if step_log else []
 
         return {
             "findings": findings,
             "react_steps": [react_step],
-            "steps_trace": [step_log],
+            "steps_trace": steps_trace_update,
             "tool_history": tool_history,
             "df_context": df_context,
             "step_count": step_count,
@@ -342,8 +333,8 @@ Only return the JSON object, no additional text."""),
         }
         
         try:
-            # Generate the actual prompt string for logging traceabilty
-            formatted_prompt = self.deep_analysis_prompt.format(**inputs)
+            # Generate the actual prompt string for logging traceability
+            formatted_prompt = self.deep_analysis_prompt.format_prompt(**inputs).to_string()
             
             # Invoke LLM
             observation = chain.invoke(inputs)
