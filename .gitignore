@@ -28,3 +28,4 @@ chroma_db/
 .env
 *.env
 secret*.txt
+.agent/
