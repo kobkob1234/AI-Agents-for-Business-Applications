@@ -46,17 +46,23 @@ Primary and contributing causes identified.
 ## Recommendations
 Actionable safety recommendations based on the analysis.
 
-Be concise but thorough. Focus on safety implications."""),
-            ("user", "Input Report: {input_report}\n\nExtracted Entities: {entities}\n\nReAct Trace (reasoning summaries + observations): {react_trace}\n\nTool Findings: {findings}")
+Be concise but thorough. Focus on safety implications.
+Use ONLY the evidence categories and ACNs provided. Do not introduce risks that are not supported by the evidence map.
+If evidence is insufficient, say so."""),
+            ("user", "Input Report: {input_report}\n\nExtracted Entities: {entities}\n\nEvidence Categories: {evidence_risks}\n\nEvidence Map (risk -> ACNs): {evidence_map}\n\nReAct Trace (reasoning summaries + observations): {react_trace}\n\nTool Findings: {findings}")
         ])
 
         chain = prompt | self.llm | StrOutputParser()
 
         report_input = state.get("input_report_trimmed") or state["input_report"]
+        entities = state.get("extracted_entities", {})
+        entities_safe = {k: v for k, v in entities.items() if k != "Keywords"}
         try:
             report = chain.invoke({
                 "input_report": report_input,
-                "entities": state["extracted_entities"],
+                "entities": entities_safe,
+                "evidence_risks": state.get("evidence_risks", []),
+                "evidence_map": state.get("evidence_map", {}),
                 "react_trace": state.get("react_steps", []),
                 "findings": state["findings"]
             })
@@ -65,7 +71,7 @@ Be concise but thorough. Focus on safety implications."""),
 
         try:
             system_msg = prompt.messages[0].prompt.template
-            user_msg = f"Input Report: {report_input}\n\nExtracted Entities: {state['extracted_entities']}\n\nReAct Trace (reasoning summaries + observations): {state.get('react_steps', [])}\n\nTool Findings: {state['findings']}"
+            user_msg = f"Input Report: {report_input}\n\nExtracted Entities: {entities_safe}\n\nEvidence Categories: {state.get('evidence_risks', [])}\n\nEvidence Map (risk -> ACNs): {state.get('evidence_map', {})}\n\nReAct Trace (reasoning summaries + observations): {state.get('react_steps', [])}\n\nTool Findings: {state['findings']}"
             full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
         except (AttributeError, IndexError):
             full_prompt = "Prompt formatting failed."

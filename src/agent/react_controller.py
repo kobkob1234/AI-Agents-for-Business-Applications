@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import os
 import json
 import pandas as pd
@@ -113,13 +113,17 @@ class ReActController:
         return ChatPromptTemplate.from_messages([
             ("system",
              "You are an aviation safety analyst. Provide a short causal analysis (3-5 sentences). "
-             "Use evidence from findings and observations. Do not reveal chain-of-thought."
+             "Use ONLY the evidence categories and ACNs provided. "
+             "Do not introduce risks that are not supported by the evidence map. "
+             "If evidence is insufficient, say so. Do not reveal chain-of-thought."
             ),
             ("user",
              "Input report:\n{input_report}\n\n"
              "Extracted entities:\n{entities}\n\n"
              "Findings:\n{findings}\n\n"
              "Last observation:\n{last_observation}\n\n"
+             "Evidence categories:\n{evidence_risks}\n\n"
+             "Evidence map (risk -> ACNs):\n{evidence_map}\n\n"
              "Focus:\n{focus}"
             )
         ])
@@ -133,6 +137,41 @@ class ReActController:
         head = text[: int(self.max_report_chars * 0.7)]
         tail = text[-int(self.max_report_chars * 0.3):]
         return f"{head}\n...\n{tail}"
+
+    def _extract_evidence_map(self, results: List[Dict[str, Any]]) -> Tuple[List[str], Dict[str, List[str]]]:
+        categories = {
+            "Adverse Weather / Crosswinds / Visibility": [
+                "crosswind", "tailwind", "wind", "windshear", "microburst", "turbulence",
+                "visibility", "ceiling", "imc", "wx", "weather", "gust", "storm", "thunder"
+            ],
+            "Runway Configuration / ATC Flow": [
+                "runway", "configuration", "flow", "arrival", "departure", "tower", "tracon",
+                "atc", "sequence", "vector", "capacity"
+            ],
+            "Wake Turbulence": [
+                "wake turbulence", "wake vortex", "wake"
+            ],
+            "Airspace Congestion / VFR Conflicts": [
+                "vfr", "class b", "airspace", "conflict", "tcas", "ra", "traffic"
+            ],
+            "Runway Contamination / Braking Action": [
+                "contamination", "braking action", "wet runway", "snow", "ice", "slush", "fair braking"
+            ]
+        }
+
+        evidence: Dict[str, set] = {k: set() for k in categories}
+        for r in results:
+            text = (r.get("content") or "").lower()
+            acn = r.get("ACN") or r.get("metadata", {}).get("ACN")
+            if not text or not acn:
+                continue
+            for cat, keys in categories.items():
+                if any(k in text for k in keys):
+                    evidence[cat].add(str(acn))
+
+        evidence_map = {k: sorted(list(v)) for k, v in evidence.items() if v}
+        evidence_risks = list(evidence_map.keys())
+        return evidence_risks, evidence_map
 
     def extract_entities(self, state: AgentState):
         print("--- Entity Extraction ---")
@@ -191,10 +230,12 @@ Only return the JSON object, no additional text."""),
     def decide_next(self, state: AgentState):
         print("--- ReAct Decision ---")
         report_text = state.get("input_report_trimmed") or state.get("input_report", "")
+        entities = state.get("extracted_entities", {})
+        entities_safe = {k: v for k, v in entities.items() if k != "Keywords"}
         prompt_vars = {
             "format_instructions": self.decision_parser.get_format_instructions(),
             "input_report": report_text,
-            "entities": state.get("extracted_entities", {}),
+            "entities": entities_safe,
             "findings": state.get("findings", []),
             "last_observation": state.get("last_observation"),
             "tool_history": state.get("tool_history", []),
@@ -259,6 +300,7 @@ Only return the JSON object, no additional text."""),
                 k = 5
             results = self.tools["semantic_search"].search(query, k=k)
             observation = self._summarize_semantic_results(results)
+            evidence_risks, evidence_map = self._extract_evidence_map(results)
             response_payload = {"query": query, "results": observation}
             findings.append(f"Semantic Search: {len(results)} similar reports found.")
 
@@ -337,18 +379,24 @@ Only return the JSON object, no additional text."""),
             "tool_history": tool_history,
             "df_context": df_context,
             "step_count": step_count,
-            "last_observation": observation
+            "last_observation": observation,
+            "evidence_risks": evidence_risks if action == "semantic_search" else state.get("evidence_risks", []),
+            "evidence_map": evidence_map if action == "semantic_search" else state.get("evidence_map", {})
         }
 
     def _deep_analysis(self, state: AgentState, focus: str = "") -> Dict[str, str]:
         chain = self.deep_analysis_prompt | self.llm | StrOutputParser()
         
         # Prepare inputs to capture the prompt
+        entities = state.get("extracted_entities", {})
+        entities_safe = {k: v for k, v in entities.items() if k != "Keywords"}
         inputs = {
             "input_report": state.get("input_report_trimmed") or state.get("input_report", ""),
-            "entities": state.get("extracted_entities", {}),
+            "entities": entities_safe,
             "findings": state.get("findings", []),
             "last_observation": state.get("last_observation", ""),
+            "evidence_risks": state.get("evidence_risks", []),
+            "evidence_map": state.get("evidence_map", {}),
             "focus": focus
         }
         

@@ -18,6 +18,8 @@ class AgentState(TypedDict):
     input_report: str
     input_report_trimmed: str
     extracted_entities: Dict[str, Any]
+    evidence_risks: List[str]
+    evidence_map: Dict[str, Any]
     messages: Annotated[List[BaseMessage], operator.add]
     findings: List[str]
     final_report: str
