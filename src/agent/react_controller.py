@@ -32,6 +32,10 @@ class ReActController:
             self.max_steps = int(os.environ.get("MAX_REACT_STEPS", 6))
         except (ValueError, TypeError):
             self.max_steps = 6
+        try:
+            self.max_report_chars = int(os.environ.get("MAX_REPORT_CHARS", 3000))
+        except (ValueError, TypeError):
+            self.max_report_chars = 3000
         self.decision_parser = JsonOutputParser()
         self.decision_prompt = self._build_decision_prompt()
         self.deep_analysis_prompt = self._build_deep_analysis_prompt()
@@ -120,8 +124,19 @@ class ReActController:
             )
         ])
 
+    def _truncate_report(self, text: str) -> str:
+        if not text:
+            return ""
+        if len(text) <= self.max_report_chars:
+            return text
+        # Keep head + tail for context
+        head = text[: int(self.max_report_chars * 0.7)]
+        tail = text[-int(self.max_report_chars * 0.3):]
+        return f"{head}\n...\n{tail}"
+
     def extract_entities(self, state: AgentState):
         print("--- Entity Extraction ---")
+        trimmed_report = self._truncate_report(state.get("input_report", ""))
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an aviation safety expert. Extract key entities from the safety report.
 
@@ -141,7 +156,7 @@ Only return the JSON object, no additional text."""),
         chain = prompt | self.llm
 
         try:
-            res = chain.invoke({"report": state["input_report"]})
+            res = chain.invoke({"report": trimmed_report})
             content = res if isinstance(res, str) else res.content
             if isinstance(content, str):
                 try:
@@ -156,10 +171,10 @@ Only return the JSON object, no additional text."""),
 
         try:
             system_msg = prompt.messages[0].prompt.template
-            user_msg = state["input_report"]
+            user_msg = trimmed_report
             full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
         except (AttributeError, IndexError):
-            full_prompt = f"Report: {state['input_report']}"
+            full_prompt = f"Report: {trimmed_report}"
 
         step_log = {
             "module": "ENTITY EXTRACTION",
@@ -167,13 +182,18 @@ Only return the JSON object, no additional text."""),
             "response": entities
         }
 
-        return {"extracted_entities": entities, "steps_trace": [step_log]}
+        return {
+            "extracted_entities": entities,
+            "input_report_trimmed": trimmed_report,
+            "steps_trace": [step_log]
+        }
 
     def decide_next(self, state: AgentState):
         print("--- ReAct Decision ---")
+        report_text = state.get("input_report_trimmed") or state.get("input_report", "")
         prompt_vars = {
             "format_instructions": self.decision_parser.get_format_instructions(),
-            "input_report": state.get("input_report", ""),
+            "input_report": report_text,
             "entities": state.get("extracted_entities", {}),
             "findings": state.get("findings", []),
             "last_observation": state.get("last_observation"),
@@ -325,7 +345,7 @@ Only return the JSON object, no additional text."""),
         
         # Prepare inputs to capture the prompt
         inputs = {
-            "input_report": state.get("input_report", ""),
+            "input_report": state.get("input_report_trimmed") or state.get("input_report", ""),
             "entities": state.get("extracted_entities", {}),
             "findings": state.get("findings", []),
             "last_observation": state.get("last_observation", ""),
@@ -406,8 +426,14 @@ Only return the JSON object, no additional text."""),
             "count": int(len(df)),
             "columns": list(df.columns)[:10]
         }
-        if len(df) > 0 and "Operator" in df.columns:
-            summary["top_operators"] = df["Operator"].value_counts().head(3).to_dict()
+        if len(df) > 0:
+            operator_col = None
+            for candidate in ["Operator", "Aircraft Operator", "Aircraft Operator.1"]:
+                if candidate in df.columns:
+                    operator_col = candidate
+                    break
+            if operator_col:
+                summary["top_operators"] = df[operator_col].value_counts().head(3).to_dict()
         return summary
 
     def _fallback_decision(self, state: AgentState) -> Dict[str, Any]:

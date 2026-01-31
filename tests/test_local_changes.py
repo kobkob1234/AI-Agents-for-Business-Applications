@@ -61,7 +61,7 @@ def test_execute_error_handling_structure():
         
         src.server.agent = BrokenAgent()
         
-        payload = {"prompt": "Crash me"}
+        payload = {"prompt": "Crash me during a B737 incident"}
         response = client.post("/api/execute", json=payload)
         
         # Should be 200 OK because we return a JSON with status='error'

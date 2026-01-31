@@ -52,9 +52,10 @@ Be concise but thorough. Focus on safety implications."""),
 
         chain = prompt | self.llm | StrOutputParser()
 
+        report_input = state.get("input_report_trimmed") or state["input_report"]
         try:
             report = chain.invoke({
-                "input_report": state["input_report"],
+                "input_report": report_input,
                 "entities": state["extracted_entities"],
                 "react_trace": state.get("react_steps", []),
                 "findings": state["findings"]
@@ -64,7 +65,7 @@ Be concise but thorough. Focus on safety implications."""),
 
         try:
             system_msg = prompt.messages[0].prompt.template
-            user_msg = f"Input Report: {state['input_report']}\n\nExtracted Entities: {state['extracted_entities']}\n\nReAct Trace (reasoning summaries + observations): {state.get('react_steps', [])}\n\nTool Findings: {state['findings']}"
+            user_msg = f"Input Report: {report_input}\n\nExtracted Entities: {state['extracted_entities']}\n\nReAct Trace (reasoning summaries + observations): {state.get('react_steps', [])}\n\nTool Findings: {state['findings']}"
             full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
         except (AttributeError, IndexError):
             full_prompt = "Prompt formatting failed."

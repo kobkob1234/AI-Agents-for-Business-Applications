@@ -16,6 +16,7 @@ class ReActStep(TypedDict):
 
 class AgentState(TypedDict):
     input_report: str
+    input_report_trimmed: str
     extracted_entities: Dict[str, Any]
     messages: Annotated[List[BaseMessage], operator.add]
     findings: List[str]

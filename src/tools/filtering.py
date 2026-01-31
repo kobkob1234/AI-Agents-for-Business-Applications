@@ -43,13 +43,15 @@ class StructuredFilter:
                 
             elif key == 'Date_Start':
                 if 'Event_Date' in result.columns:
-                    pd_date = pd.to_datetime(value)
-                    result = result[result['Event_Date'] >= pd_date]
+                    pd_date = pd.to_datetime(value, errors="coerce")
+                    if pd.notna(pd_date):
+                        result = result[result['Event_Date'] >= pd_date]
                     
             elif key == 'Date_End':
                 if 'Event_Date' in result.columns:
-                    pd_date = pd.to_datetime(value)
-                    result = result[result['Event_Date'] <= pd_date]
+                    pd_date = pd.to_datetime(value, errors="coerce")
+                    if pd.notna(pd_date):
+                        result = result[result['Event_Date'] <= pd_date]
                     
             elif key == 'Event_Date':
                 # Exact match or month match

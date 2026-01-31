@@ -55,6 +55,7 @@ class ASIAgent:
     def run(self, input_report: str):
         initial_state = {
             "input_report": input_report,
+            "input_report_trimmed": "",
             "messages": [],
             "findings": [],
             "extracted_entities": {},
@@ -76,6 +77,7 @@ class ASIAgent:
         """
         initial_state = {
             "input_report": input_report,
+            "input_report_trimmed": "",
             "messages": [],
             "findings": [],
             "extracted_entities": {},

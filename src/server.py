@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict, Generator
+import re
 import os
 import json
 import uvicorn
@@ -45,6 +46,23 @@ app.mount("/static", StaticFiles(directory="src/static", html=True), name="stati
 # Init Agent Global
 # We initialize it once on startup
 agent = None
+
+AVIATION_KEYWORDS = {
+    "aviation", "aircraft", "airplane", "flight", "pilot", "crew", "cockpit",
+    "runway", "takeoff", "landing", "approach", "departure", "descent", "climb",
+    "atc", "tower", "airspace", "turbulence", "wake", "asrs", "faa"
+}
+
+def is_aviation_prompt(text: str) -> bool:
+    if not text:
+        return False
+    lowered = text.lower()
+    if any(word in lowered for word in AVIATION_KEYWORDS):
+        return True
+    # Aircraft pattern: e.g., B737, A320, B777
+    if re.search(r"\b[ab]\d{3,4}\b", lowered):
+        return True
+    return False
 
 @app.on_event("startup")
 async def startup_event():
@@ -135,6 +153,24 @@ def execute(input_data: ExecuteInput):
             response=None,
             steps=[]
         )
+
+    if not is_aviation_prompt(input_data.prompt):
+        execution_time_ms = int((time.time() - start_time) * 1000)
+        refusal = "This request is not related to aviation safety; I cannot comply or assist."
+        supabase_manager.log_execution(
+            prompt=input_data.prompt,
+            entities={},
+            steps=[],
+            final_report=refusal,
+            execution_time_ms=execution_time_ms,
+            status="completed"
+        )
+        return ExecuteResponse(
+            status="ok",
+            error=None,
+            response=refusal,
+            steps=[]
+        )
     
     try:
         # Run agent
@@ -206,6 +242,21 @@ async def execute_stream(input_data: ExecuteInput):
         from src.utils.supabase_manager import supabase_manager
         
         start_time = time.time()
+
+        if not is_aviation_prompt(input_data.prompt):
+            refusal = "This request is not related to aviation safety; I cannot comply or assist."
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            supabase_manager.log_execution(
+                prompt=input_data.prompt,
+                entities={},
+                steps=[],
+                final_report=refusal,
+                execution_time_ms=execution_time_ms,
+                status="completed"
+            )
+            yield f"data: {json.dumps({'type': 'result', 'response': refusal, 'steps': [], 'entities': {}})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+            return
         
         final_payload = None
         try:
