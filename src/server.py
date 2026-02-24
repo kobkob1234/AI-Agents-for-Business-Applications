@@ -46,6 +46,20 @@ app.mount("/static", StaticFiles(directory="src/static", html=True), name="stati
 # Init Agent Global
 # We initialize it once on startup
 agent = None
+is_agent_initializing = False
+
+def init_agent_sync():
+    global agent, is_agent_initializing
+    try:
+        print("Starting background ASI Agent initialization...")
+        agent_instance = ASIAgent()
+        agent = agent_instance
+        print("ASI Agent Initialized successfully.")
+    except Exception as e:
+        agent = None
+        print(f"Failed to initialize agent in background: {e}")
+    finally:
+        is_agent_initializing = False
 
 def _is_strict_mode() -> bool:
     app_env = os.getenv("APP_ENV", "").strip().lower()
@@ -121,14 +135,17 @@ async def generic_exception_handler(request: Request, exc: Exception):
 
 @app.on_event("startup")
 async def startup_event():
-    global agent
+    global is_agent_initializing
     try:
         _validate_required_integrations()
-        agent = ASIAgent()
-        print("ASI Agent Initialized.")
+        print("Validations passed. Spawning background agent initialization...")
+        is_agent_initializing = True
+        import asyncio
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(None, init_agent_sync)
     except Exception as e:
-        agent = None
-        print(f"Failed to initialize agent: {e}")
+        is_agent_initializing = False
+        print(f"Failed to validate integrations: {e}")
 
 @app.get("/api/runtime_diagnostics")
 async def runtime_diagnostics():
@@ -284,6 +301,7 @@ def execute(input_data: ExecuteInput):
     start_time = time.time()
     if not agent:
         execution_time_ms = int((time.time() - start_time) * 1000)
+        error_msg = "Agent is currently initializing in the background. Please try again in a few moments." if is_agent_initializing else "Agent not initialized"
         # Log error to Supabase (if available)
         supabase_manager.log_execution(
             prompt=input_data.prompt,
@@ -295,7 +313,7 @@ def execute(input_data: ExecuteInput):
         )
         return ExecuteResponse(
             status="error",
-            error="Agent not initialized",
+            error=error_msg,
             response=None,
             steps=[]
         )
@@ -361,9 +379,10 @@ async def execute_stream(input_data: ExecuteInput):
     Yields events as the agent processes each ReAct step.
     """
     def stream_generator() -> Generator[str, None, None]:
-        global agent
+        global agent, is_agent_initializing
         if not agent:
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Agent not initialized'})}\n\n"
+            error_msg = "Agent is currently initializing in the background. Please try again in a few moments." if is_agent_initializing else "Agent not initialized"
+            yield f"data: {json.dumps({'type': 'error', 'message': error_msg})}\n\n"
             return
         
         import time
