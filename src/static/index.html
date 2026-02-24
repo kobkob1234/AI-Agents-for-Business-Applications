@@ -11,18 +11,41 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-gradient-start: #0f0f23;
-            --bg-gradient-end: #1a1a3e;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0c0;
-            --accent-blue: #4f8fff;
-            --accent-cyan: #00d4ff;
-            --accent-green: #00ff88;
-            --accent-orange: #ff9f43;
-            --error-red: #ff5252;
-            --step-bg: rgba(79, 143, 255, 0.1);
+            --bg-gradient-start: #070912;
+            --bg-gradient-end: #0e1222;
+            --card-bg: rgba(20, 25, 38, 0.6);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --text-primary: #f2f4f8;
+            --text-secondary: #94a0b8;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --error-red: #ef4444;
+            --step-bg: rgba(15, 23, 42, 0.5);
+            --input-bg: rgba(0, 0, 0, 0.3);
+            --report-bg: rgba(0, 0, 0, 0.3);
+            --code-bg: rgba(0, 0, 0, 0.4);
+            --thinking-bg: rgba(20, 25, 38, 0.5);
+        }
+
+        body.light-theme {
+            --bg-gradient-start: #f8fafc;
+            --bg-gradient-end: #e2e8f0;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-blue: #2563eb;
+            --accent-cyan: #0891b2;
+            --accent-green: #059669;
+            --accent-orange: #ea580c;
+            --error-red: #dc2626;
+            --step-bg: rgba(241, 245, 249, 0.8);
+            --input-bg: rgba(255, 255, 255, 0.9);
+            --report-bg: rgba(248, 250, 252, 0.9);
+            --code-bg: rgba(241, 245, 249, 0.9);
+            --thinking-bg: rgba(255, 255, 255, 0.9);
         }
 
         * {
@@ -34,9 +57,11 @@
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            background-attachment: fixed;
             min-height: 100vh;
             color: var(--text-primary);
             line-height: 1.6;
+            transition: color 0.3s ease, background 0.3s ease;
         }
 
         .app-container {
@@ -54,6 +79,7 @@
             font-size: 48px;
             margin-bottom: 10px;
             animation: float 3s ease-in-out infinite;
+            pointer-events: none;
         }
 
         @keyframes float {
@@ -115,11 +141,13 @@
 
         .card {
             background: var(--card-bg);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--card-border);
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 30px;
             margin-bottom: 25px;
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
@@ -151,7 +179,7 @@
             padding: 16px;
             border: 1px solid var(--card-border);
             border-radius: 12px;
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--input-bg);
             color: var(--text-primary);
             font-family: inherit;
             font-size: 15px;
@@ -259,7 +287,7 @@
         }
 
         .report-content {
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--report-bg);
             border-radius: 12px;
             padding: 20px;
             white-space: pre-wrap;
@@ -352,12 +380,12 @@
         }
 
         .step-code {
-            background: rgba(0, 0, 0, 0.4);
+            background: var(--code-bg);
             border-radius: 8px;
             padding: 12px;
             font-family: 'SF Mono', 'Fira Code', monospace;
             font-size: 12px;
-            color: #e0e0e0;
+            color: var(--text-primary);
             overflow-x: auto;
             white-space: pre-wrap;
             word-break: break-word;
@@ -438,98 +466,54 @@
             }
         }
 
-        /* Live Reasoning Panel Styles */
-        .live-step {
+        /* Modern LLM "Thinking" styles */
+        .modern-thinking-container {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            background: rgba(0, 0, 0, 0.15);
-            border-radius: 6px;
-            margin-bottom: 4px;
-            border-left: 3px solid var(--card-border);
-            transition: all 0.2s ease;
-            cursor: pointer;
+            gap: 12px;
+            padding: 16px 20px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            background: transparent;
+            border: 1px solid transparent;
+            transition: opacity 0.3s ease;
         }
 
-        .live-step:hover {
-            background: rgba(0, 0, 0, 0.25);
-        }
-
-        .live-step.complete {
-            border-left-color: var(--accent-green);
-        }
-
-        .live-step.running {
-            border-left-color: var(--accent-cyan);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.7;
-            }
-        }
-
-        .live-step-icon {
-            font-size: 14px;
-            min-width: 18px;
-        }
-
-        .live-step-content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .live-step-title {
-            font-weight: 600;
-            font-size: 13px;
+        .thinking-text {
             color: var(--text-primary);
+            font-size: 15px;
+            font-weight: 400;
+            flex: 1;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            opacity: 0.8;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
-        .live-step-arrow {
-            font-size: 10px;
-            color: var(--text-secondary);
-            transition: transform 0.2s;
+        .thinking-spinner {
+            display: flex;
+            align-items: center;
         }
 
-        .live-step.expanded .live-step-arrow {
-            transform: rotate(180deg);
-        }
-
-        .live-step-detail {
-            display: none;
-            font-size: 12px;
-            color: var(--text-secondary);
-            padding: 8px 12px 8px 40px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 0 0 6px 6px;
-            margin-top: -4px;
-            margin-bottom: 4px;
-            word-break: break-word;
-        }
-
-        .live-step-detail.visible {
-            display: block;
-        }
-
-        #livePanelContent.collapsed {
-            display: none;
+        .sleek-ring {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--text-secondary);
+            border-top-color: var(--text-primary);
+            border-radius: 50%;
+            animation: modern-spin 0.8s linear infinite;
         }
     </style>
 </head>
 
 <body>
     <div class="app-container">
-        <header>
+        <header style="position: relative; z-index: 10;">
+            <button id="themeToggle" onclick="toggleTheme()"
+                style="position: absolute; right: 0; top: 0; z-index: 20; background: transparent; border: 1px solid var(--card-border); color: var(--text-primary); padding: 8px 12px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                ☀️ Light Mode
+            </button>
             <div class="logo">✈️</div>
             <h1>Autonomous Safety Investigator</h1>
             <p class="subtitle">AI-Powered Aviation Root Cause Analysis</p>
@@ -561,22 +545,13 @@
                 <div class="error-msg" id="errorMsg"></div>
             </div>
 
-            <!-- Live Reasoning Panel (Single Window Hybrid) -->
-            <div class="card" id="livePanel" style="display: none;">
-                <div class="card-title">
-                    <span>🔄 Live Reasoning</span>
-                    <span id="stepCounter"
-                        style="margin-left: auto; font-size: 14px; color: var(--accent-cyan);"></span>
+            <!-- Modern LLM "Thinking" Indicator -->
+            <div id="modernThinking" class="modern-thinking-container" style="display: none;">
+                <div class="thinking-spinner" id="thinkingSpinner" style="margin-right: 12px;">
+                    <div class="sleek-ring"></div>
                 </div>
-                <div id="liveCurrentStep"
-                    style="display: flex; align-items: center; gap: 12px; padding: 16px; background: rgba(0, 212, 255, 0.1); border-radius: 8px; border-left: 3px solid var(--accent-cyan);">
-                    <span id="liveIcon" style="font-size: 20px;">🔄</span>
-                    <div style="flex: 1;">
-                        <div id="liveStepName" style="font-weight: 600; font-size: 15px; color: var(--text-primary);">
-                            Initializing...</div>
-                        <div id="liveStepDetail"
-                            style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;"></div>
-                    </div>
+                <div class="thinking-text" id="thinkingText">
+                    Thinking...
                 </div>
             </div>
 
@@ -706,11 +681,9 @@
             }
 
             const runBtn = document.getElementById('runBtn');
-            const livePanel = document.getElementById('livePanel');
-            const liveStepName = document.getElementById('liveStepName');
-            const liveStepDetail = document.getElementById('liveStepDetail');
-            const liveIcon = document.getElementById('liveIcon');
-            const stepCounter = document.getElementById('stepCounter');
+            const modernThinking = document.getElementById('modernThinking');
+            const thinkingText = document.getElementById('thinkingText');
+            const thinkingSpinner = document.getElementById('thinkingSpinner');
             const output = document.getElementById('output');
             const errorMsg = document.getElementById('errorMsg');
             const finalReport = document.getElementById('finalReport');
@@ -719,17 +692,23 @@
 
             // Reset UI
             runBtn.disabled = true;
-            livePanel.style.display = 'block'; // Keep panel as "Processing Status"
-            liveStepName.textContent = 'Processing...';
-            liveStepDetail.textContent = 'This may take up to 60 seconds (Analyzing...)';
-            liveIcon.textContent = '⏳';
-            liveIcon.style.animation = 'spin 1.5s linear infinite';
-            stepCounter.textContent = '';
+            modernThinking.style.display = 'flex';
+            thinkingText.textContent = 'Extracting entities...';
+            thinkingSpinner.style.display = 'flex';
+
+            // Advanced live simulation steps (replaces old "processing...")
+            const simSteps = ['Running Vector Search...', 'Generating Insights...', 'Synthesizing Explanation...', 'Refining the Explanation...'];
+            let stepIndex = 0;
+            const thinkInterval = setInterval(() => {
+                thinkingText.textContent = simSteps[stepIndex];
+                stepIndex = (stepIndex + 1) % simSteps.length;
+            }, 3000);
+
             output.style.display = 'none';
             errorMsg.style.display = 'none';
             finalReport.textContent = '';
             stepsContainer.innerHTML = '';
-            loader.style.display = 'block';
+            loader.style.display = 'none'; // We use the new thinking indicator instead
 
             try {
                 // COMPLIANCE FIX: Call /api/execute (Validation requirement)
@@ -784,10 +763,8 @@
                 output.style.display = 'block';
 
                 // Update "Live" panel to done state
-                liveStepName.textContent = 'Analysis Complete';
-                liveStepDetail.textContent = 'View report below.';
-                liveIcon.textContent = '✅';
-                liveIcon.style.animation = 'none';
+                clearInterval(thinkInterval);
+                modernThinking.style.display = 'none';
 
                 output.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -796,10 +773,9 @@
                 errorMsg.textContent = 'Error: ' + err.message;
                 errorMsg.style.display = 'block';
 
-                liveStepName.textContent = 'Failed';
-                liveStepDetail.textContent = 'See error message.';
-                liveIcon.textContent = '❌';
-                liveIcon.style.animation = 'none';
+                clearInterval(thinkInterval);
+                thinkingText.textContent = 'Failed';
+                thinkingSpinner.style.display = 'none';
             } finally {
                 runBtn.disabled = false;
                 loader.style.display = 'none';
@@ -808,6 +784,18 @@
 
         function toggleStep(stepEl) {
             stepEl.classList.toggle('open');
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById('themeToggle');
+            body.classList.toggle('light-theme');
+
+            if (body.classList.contains('light-theme')) {
+                btn.innerHTML = '🌙 Dark Mode';
+            } else {
+                btn.innerHTML = '☀️ Light Mode';
+            }
         }
 
         // Initialize
