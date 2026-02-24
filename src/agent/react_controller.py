@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Tuple
 import os
 import json
+import hashlib
 import pandas as pd
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -60,6 +61,26 @@ class ReActController:
             "trend_analyzer": "TREND ANALYZER",
             "deep_analysis": "DEEP ANALYSIS"
         }
+
+        try:
+            self.duplicate_repeat_threshold = int(os.environ.get("DUPLICATE_ACTION_REPEAT_THRESHOLD", 1))
+        except (ValueError, TypeError):
+            self.duplicate_repeat_threshold = 1
+
+        try:
+            self.fast_track_min_cases = int(os.environ.get("FAST_TRACK_MIN_CASES", 5))
+        except (ValueError, TypeError):
+            self.fast_track_min_cases = 5
+
+        try:
+            self.fast_track_min_top_category = int(os.environ.get("FAST_TRACK_MIN_TOP_CATEGORY", 4))
+        except (ValueError, TypeError):
+            self.fast_track_min_top_category = 4
+
+        try:
+            self.fast_track_min_entity_fields = int(os.environ.get("FAST_TRACK_MIN_ENTITY_FIELDS", 2))
+        except (ValueError, TypeError):
+            self.fast_track_min_entity_fields = 2
 
     def _build_tool_specs(self) -> List[Dict[str, Any]]:
         return [
@@ -157,6 +178,77 @@ class ReActController:
         tail = text[-int(self.max_report_chars * 0.3):]
         return f"{head}\n...\n{tail}"
 
+    def _canonical_action_input(self, action_input: Dict[str, Any]) -> str:
+        try:
+            return json.dumps(action_input, sort_keys=True, separators=(",", ":"), default=str)
+        except Exception:
+            return str(action_input)
+
+    def _action_fingerprint(self, action: str, action_input: Dict[str, Any]) -> str:
+        if not action:
+            return ""
+        payload = f"{action}|{self._canonical_action_input(action_input)}"
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+
+    def _is_known_entity_value(self, value: Any) -> bool:
+        if value is None:
+            return False
+        v = str(value).strip().lower()
+        return v not in {"", "unknown", "unknown aircraft", "unknown location", "n/a", "none"}
+
+    def _evaluate_fast_track(
+        self,
+        results: List[Dict[str, Any]],
+        evidence_map: Dict[str, List[str]],
+        entities: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        unique_acns = set()
+        for r in results:
+            acn = r.get("ACN") or r.get("metadata", {}).get("ACN")
+            if acn:
+                unique_acns.add(str(acn))
+
+        category_sizes = {
+            category: len(acns)
+            for category, acns in evidence_map.items()
+            if isinstance(acns, list)
+        }
+
+        if category_sizes:
+            top_category = max(category_sizes, key=category_sizes.get)
+            top_category_count = category_sizes[top_category]
+        else:
+            top_category = ""
+            top_category_count = 0
+
+        known_entity_fields = sum(
+            1 for k in ["Aircraft Model", "Location", "Event Type"]
+            if self._is_known_entity_value(entities.get(k))
+        )
+
+        has_repeated_cases = len(unique_acns) >= self.fast_track_min_cases
+        has_stable_evidence = top_category_count >= self.fast_track_min_top_category
+        has_entity_support = known_entity_fields >= self.fast_track_min_entity_fields
+
+        ready = has_repeated_cases and has_stable_evidence and has_entity_support
+
+        reason = (
+            f"cases={len(unique_acns)} (min {self.fast_track_min_cases}), "
+            f"top_category={top_category or 'none'}:{top_category_count} (min {self.fast_track_min_top_category}), "
+            f"known_entity_fields={known_entity_fields} (min {self.fast_track_min_entity_fields})"
+        )
+
+        return {
+            "ready": ready,
+            "reason": reason,
+            "metrics": {
+                "unique_cases": len(unique_acns),
+                "top_category": top_category,
+                "top_category_count": top_category_count,
+                "known_entity_fields": known_entity_fields
+            }
+        }
+
     def _extract_evidence_map(self, results: List[Dict[str, Any]]) -> Tuple[List[str], Dict[str, List[str]]]:
         categories = {
             "Adverse Weather / Crosswinds / Visibility": [
@@ -251,6 +343,47 @@ Only return the JSON object, no additional text."""),
         report_text = state.get("input_report_trimmed") or state.get("input_report", "")
         entities = state.get("extracted_entities", {})
         entities_safe = {k: v for k, v in entities.items() if k != "Keywords"}
+        
+        # Guard 1: strict duplicate blocking (same action + same effective input)
+        if state.get("duplicate_guard_triggered", False):
+            decision = {
+                "decision": "final",
+                "reasoning_summary": "Duplicate action/input detected; forcing finalize to avoid loop.",
+                "action": "",
+                "action_input": {},
+                "final": "Proceed to synthesis with current evidence."
+            }
+            step_log = {
+                "module": "REACT DECIDER",
+                "prompt": {
+                    "guard": "duplicate_action",
+                    "last_action_fingerprint": state.get("last_action_fingerprint", ""),
+                    "repeated_action_count": state.get("repeated_action_count", 0)
+                },
+                "response": decision
+            }
+            return {"react_decision": decision, "steps_trace": [step_log]}
+
+        # Guard 2: fast-track finalize for high-confidence obvious incidents
+        if state.get("fast_track_ready", False):
+            decision = {
+                "decision": "final",
+                "reasoning_summary": "High-confidence corroboration reached; fast-tracking to synthesis.",
+                "action": "",
+                "action_input": {},
+                "final": "Generate final RCA report directly from current evidence."
+            }
+            step_log = {
+                "module": "REACT DECIDER",
+                "prompt": {
+                    "guard": "fast_track_finalize",
+                    "reason": state.get("fast_track_reason", ""),
+                    "tool_history": state.get("tool_history", [])
+                },
+                "response": decision
+            }
+            return {"react_decision": decision, "steps_trace": [step_log]}
+
         prompt_vars = {
             "format_instructions": self.decision_parser.get_format_instructions(),
             "input_report": report_text,
@@ -308,6 +441,9 @@ Only return the JSON object, no additional text."""),
         evidence_risks = list(state.get("evidence_risks", []))
         evidence_map = dict(state.get("evidence_map", {}))
 
+        fast_track_ready = bool(state.get("fast_track_ready", False))
+        fast_track_reason = str(state.get("fast_track_reason", ""))
+
         observation = None
         response_payload: Dict[str, Any] = {}
         step_log = None
@@ -315,6 +451,7 @@ Only return the JSON object, no additional text."""),
             "action": action,
             "action_input": action_input
         }
+        fingerprint_input: Dict[str, Any] = dict(action_input)
 
         if action == "semantic_search":
             query = action_input.get("query") or self._build_semantic_query(
@@ -329,15 +466,28 @@ Only return the JSON object, no additional text."""),
             observation = self._summarize_semantic_results(results)
             evidence_risks, evidence_map = self._extract_evidence_map(results)
 
+            fast_track_eval = self._evaluate_fast_track(
+                results=results,
+                evidence_map=evidence_map,
+                entities=state.get("extracted_entities", {})
+            )
+            fast_track_ready = fast_track_eval["ready"]
+            fast_track_reason = fast_track_eval["reason"]
+
             prompt_payload.update({"query": query, "k": k})
+            fingerprint_input = {"query": query, "k": k}
             response_payload = {
                 "query": query,
                 "result_count": len(results),
                 "results": observation,
                 "evidence_risks": evidence_risks,
-                "evidence_map": evidence_map
+                "evidence_map": evidence_map,
+                "fast_track": fast_track_eval
             }
             findings.append(f"Semantic Search: {len(results)} similar reports found.")
+            if fast_track_ready:
+                findings.append(f"Fast-track condition met: {fast_track_reason}")
+
             step_log = {
                 "module": self.arch_module_name["semantic_search"],
                 "prompt": prompt_payload,
@@ -368,6 +518,7 @@ Only return the JSON object, no additional text."""),
                 used_full_dataset = True
 
             prompt_payload.update({"filters": filters, "used_full_dataset": used_full_dataset})
+            fingerprint_input = {"filters": filters, "used_full_dataset": used_full_dataset}
             response_payload = {"filters_applied": filters, "summary": observation}
             findings.append(f"Structured Filter: {len(df_res)} records available{msg_suffix}.")
             step_log = {
@@ -394,6 +545,12 @@ Only return the JSON object, no additional text."""),
                 "metric_col": metric_col,
                 "rows_used": int(len(df_to_use))
             })
+            fingerprint_input = {
+                "use_filtered": use_filtered,
+                "time_col": time_col,
+                "metric_col": metric_col,
+                "rows_used": int(len(df_to_use))
+            }
             response_payload = {"trend": observation}
             findings.append(f"Trend Analysis: {observation}")
             step_log = {
@@ -409,6 +566,7 @@ Only return the JSON object, no additional text."""),
             actual_prompt = result.get("actual_prompt", "")
 
             prompt_payload.update({"focus": focus, "llm_prompt": actual_prompt})
+            fingerprint_input = {"focus": focus}
             response_payload = {"analysis": observation}
             findings.append(f"Deep Analysis: {observation}")
             step_log = {
@@ -430,6 +588,23 @@ Only return the JSON object, no additional text."""),
         tool_history.append(action)
         step_count = state.get("step_count", 0) + 1
 
+        new_fingerprint = self._action_fingerprint(action, fingerprint_input)
+        prev_fingerprint = state.get("last_action_fingerprint", "")
+
+        if new_fingerprint and new_fingerprint == prev_fingerprint:
+            repeated_action_count = int(state.get("repeated_action_count", 0)) + 1
+        else:
+            repeated_action_count = 0
+
+        duplicate_guard_triggered = bool(new_fingerprint) and (
+            repeated_action_count >= self.duplicate_repeat_threshold
+        )
+
+        if duplicate_guard_triggered:
+            findings.append(
+                f"Duplicate guard triggered: repeated action '{action}' with unchanged effective input."
+            )
+
         react_step = {
             "step": step_count,
             "reasoning_summary": decision.get("reasoning_summary", ""),
@@ -447,7 +622,12 @@ Only return the JSON object, no additional text."""),
             "step_count": step_count,
             "last_observation": observation,
             "evidence_risks": evidence_risks,
-            "evidence_map": evidence_map
+            "evidence_map": evidence_map,
+            "last_action_fingerprint": new_fingerprint,
+            "repeated_action_count": repeated_action_count,
+            "duplicate_guard_triggered": duplicate_guard_triggered,
+            "fast_track_ready": fast_track_ready,
+            "fast_track_reason": fast_track_reason
         }
 
     def _deep_analysis(self, state: AgentState, focus: str = "") -> Dict[str, str]:

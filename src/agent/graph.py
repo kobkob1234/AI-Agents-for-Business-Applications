@@ -68,7 +68,12 @@ class ASIAgent:
             "df_context": None,
             "step_count": 0,
             "max_steps": self.react.max_steps,
-            "last_observation": None
+            "last_observation": None,
+            "last_action_fingerprint": "",
+            "repeated_action_count": 0,
+            "duplicate_guard_triggered": False,
+            "fast_track_ready": False,
+            "fast_track_reason": ""
         }
         return self.workflow.invoke(initial_state)
 
@@ -92,7 +97,12 @@ class ASIAgent:
             "df_context": None,
             "step_count": 0,
             "max_steps": self.react.max_steps,
-            "last_observation": None
+            "last_observation": None,
+            "last_action_fingerprint": "",
+            "repeated_action_count": 0,
+            "duplicate_guard_triggered": False,
+            "fast_track_ready": False,
+            "fast_track_reason": ""
         }
         
         final_state = None

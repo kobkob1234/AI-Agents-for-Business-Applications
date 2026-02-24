@@ -33,3 +33,10 @@ class AgentState(TypedDict):
     step_count: int
     max_steps: int
     last_observation: Any
+
+    # Optimization guardrails
+    last_action_fingerprint: str
+    repeated_action_count: int
+    duplicate_guard_triggered: bool
+    fast_track_ready: bool
+    fast_track_reason: str
