@@ -148,23 +148,28 @@ class ASIAgent:
                         last_step = react_steps[-1]
                         action = last_step.get("action", "")
                         observation = last_step.get("observation", "")
-                        
-                        # Add to full trace
-                        # Note: `steps_trace` in node_output contains the formal step log
+
                         new_trace_logs = node_output.get("steps_trace", [])
                         all_steps.extend(new_trace_logs)
-                        
-                        # Truncate observation for display
+
+                        module_name_map = {
+                            "semantic_search": "SEMANTIC SEARCH",
+                            "filtering": "STRUCTURED FILTER",
+                            "trend_analyzer": "TREND ANALYZER",
+                            "deep_analysis": "DEEP ANALYSIS" # Assuming this might be added later
+                        }
+                        module_label = module_name_map.get(action, f"TOOL: {action}")
+
                         if isinstance(observation, dict):
                             obs_preview = str(observation)[:100]
                         elif isinstance(observation, list):
                             obs_preview = f"{len(observation)} items"
                         else:
                             obs_preview = str(observation)[:100]
-                        
+
                         yield {
                             "type": "step",
-                            "step": f"Tool: {action}",
+                            "step": module_label,
                             "status": "complete",
                             "detail": obs_preview
                         }

@@ -2,31 +2,38 @@ import pandas as pd
 import os
 import glob
 from src.utils.columns import COLUMN_NAMES
+from src.utils.supabase_manager import HAS_SUPABASE, create_client, Client
 
-try:
-    from supabase import create_client, Client
-    HAS_SUPABASE = True
-except ImportError:
-    HAS_SUPABASE = False
+def _is_strict_mode() -> bool:
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    strict_flag = os.getenv("REQUIRE_STRICT_STACK", "").strip().lower()
+    return app_env in {"prod", "production"} or strict_flag in {"1", "true", "yes"}
 
 def load_data(data_dir: str = "data") -> pd.DataFrame:
     """
     Loads data from Supabase (Primary) or local CSV files (Fallback).
+    In strict mode, fallback is forbidden.
     """
-    # 1. Try Supabase
+    strict_mode = _is_strict_mode()
+
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_KEY")
-    
+
+    if strict_mode and not HAS_SUPABASE:
+        raise RuntimeError("Strict mode: supabase package is required")
+
+    if strict_mode and (not supabase_url or not supabase_key):
+        raise RuntimeError("Strict mode: SUPABASE_URL and SUPABASE_KEY are required")
+
     if HAS_SUPABASE and supabase_url and supabase_key:
         try:
             print("Attempting to load data from Supabase (Primary)...")
             client: Client = create_client(supabase_url, supabase_key)
-            
-            # Fetch all rows with pagination
+
             all_rows = []
             batch_size = 1000
             start = 0
-            
+
             while True:
                 print(f"Fetching rows {start} to {start + batch_size}...")
                 response = client.table("asrs_reports").select("*").order("ACN").range(start, start + batch_size - 1).execute()
@@ -34,35 +41,41 @@ def load_data(data_dir: str = "data") -> pd.DataFrame:
                 if not data:
                     break
                 all_rows.extend(data)
-                
+
                 if len(data) < batch_size:
                     break
                 start += batch_size
-            
+
             if len(all_rows) > 0:
                 print(f"✅ Successfully loaded {len(all_rows)} records from Supabase.")
                 df = pd.DataFrame(all_rows)
-                # Ensure columns match expected schema if needed
-                # Rename columns to match internal schema (Supabase -> Internal)
+
                 column_mapping = {
                     "aircraft_make_model": "Make Model Name",
                     "location": "Locale Reference",
                     "event_date": "Event_Date"
                 }
                 df = df.rename(columns=column_mapping)
-                
-                # Check for any missing columns and warn
-                missing_cols = [v for k, v in column_mapping.items() if v not in df.columns]
+
+                missing_cols = [v for _, v in column_mapping.items() if v not in df.columns]
                 if missing_cols:
-                     print(f"⚠️ Warning: Some expected columns missing after mapping: {missing_cols}")
+                    print(f"⚠️ Warning: Some expected columns missing after mapping: {missing_cols}")
 
                 return df
-            else:
-                 print("⚠️ Supabase table 'asrs_reports' empty or not found. Falling back to local CSVs.")
+
+            if strict_mode:
+                raise RuntimeError("Strict mode: Supabase table 'asrs_reports' is empty or inaccessible")
+
+            print("⚠️ Supabase table 'asrs_reports' empty or not found. Falling back to local CSVs.")
+
         except Exception as e:
-             print(f"⚠️ Supabase load failed: {e}. Falling back to local CSVs.")
-    
-    # 2. Fallback to Local CSV
+            if strict_mode:
+                raise RuntimeError(f"Strict mode: Supabase load failed: {e}") from e
+            print(f"⚠️ Supabase load failed: {e}. Falling back to local CSVs.")
+
+    if strict_mode:
+        raise RuntimeError("Strict mode: local CSV fallback is disabled")
+
     return load_from_csv(data_dir)
 
 def load_from_csv(data_dir: str) -> pd.DataFrame:

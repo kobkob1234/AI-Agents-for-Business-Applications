@@ -6,9 +6,16 @@ import os
 
 class Synthesizer:
     def __init__(self):
+        app_env = os.environ.get("APP_ENV", "").strip().lower()
+        strict_flag = os.environ.get("REQUIRE_STRICT_STACK", "").strip().lower()
+        strict_mode = app_env in {"prod", "production"} or strict_flag in {"1", "true", "yes"}
+
         api_key = os.environ.get("OPENAI_API_KEY")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.llmod.ai/v1")
         model_name = "RPRTHPB-gpt-5-mini"
+
+        if strict_mode and "llmod.ai" not in base_url:
+            raise RuntimeError("Strict mode: OPENAI_BASE_URL must point to LLMod.ai")
 
         if api_key:
             self.llm = ChatOpenAI(
@@ -18,6 +25,8 @@ class Synthesizer:
                 base_url=base_url
             )
         else:
+            if strict_mode:
+                raise RuntimeError("Strict mode: OPENAI_API_KEY is required")
             from src.agent.mock_llm import SimpleMockLLM
             self.llm = SimpleMockLLM()
 

@@ -12,9 +12,17 @@ from src.agent.mock_llm import SimpleMockLLM
 class ReActController:
     def __init__(self, tools_map: Dict[str, Any]):
         self.tools = tools_map
+
+        app_env = os.environ.get("APP_ENV", "").strip().lower()
+        strict_flag = os.environ.get("REQUIRE_STRICT_STACK", "").strip().lower()
+        self.strict_mode = app_env in {"prod", "production"} or strict_flag in {"1", "true", "yes"}
+
         api_key = os.environ.get("OPENAI_API_KEY")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.llmod.ai/v1")
         model_name = "RPRTHPB-gpt-5-mini"
+
+        if self.strict_mode and "llmod.ai" not in base_url:
+            raise RuntimeError("Strict mode: OPENAI_BASE_URL must point to LLMod.ai")
 
         if api_key:
             print(f"Using LLMod.ai Model: {model_name}")
@@ -25,6 +33,8 @@ class ReActController:
                 base_url=base_url
             )
         else:
+            if self.strict_mode:
+                raise RuntimeError("Strict mode: OPENAI_API_KEY is required")
             print("WARNING: OPENAI_API_KEY not found. Using SimpleMockLLM (Generic).")
             self.llm = SimpleMockLLM()
 
@@ -32,15 +42,24 @@ class ReActController:
             self.max_steps = int(os.environ.get("MAX_REACT_STEPS", 6))
         except (ValueError, TypeError):
             self.max_steps = 6
+
         try:
             self.max_report_chars = int(os.environ.get("MAX_REPORT_CHARS", 3000))
         except (ValueError, TypeError):
             self.max_report_chars = 3000
+
         self.decision_parser = JsonOutputParser()
         self.decision_prompt = self._build_decision_prompt()
         self.deep_analysis_prompt = self._build_deep_analysis_prompt()
         self.tool_specs = self._build_tool_specs()
         self.tool_names = [tool["name"] for tool in self.tool_specs]
+
+        self.arch_module_name = {
+            "semantic_search": "SEMANTIC SEARCH",
+            "structured_filter": "STRUCTURED FILTER",
+            "trend_analyzer": "TREND ANALYZER",
+            "deep_analysis": "DEEP ANALYSIS"
+        }
 
     def _build_tool_specs(self) -> List[Dict[str, Any]]:
         return [
@@ -286,9 +305,16 @@ Only return the JSON object, no additional text."""),
         findings = list(state.get("findings", []))
         tool_history = list(state.get("tool_history", []))
         df_context = state.get("df_context")
+        evidence_risks = list(state.get("evidence_risks", []))
+        evidence_map = dict(state.get("evidence_map", {}))
+
         observation = None
-        response_payload = None
+        response_payload: Dict[str, Any] = {}
         step_log = None
+        prompt_payload: Dict[str, Any] = {
+            "action": action,
+            "action_input": action_input
+        }
 
         if action == "semantic_search":
             query = action_input.get("query") or self._build_semantic_query(
@@ -298,27 +324,40 @@ Only return the JSON object, no additional text."""),
                 k = int(action_input.get("k", 5))
             except (ValueError, TypeError):
                 k = 5
+
             results = self.tools["semantic_search"].search(query, k=k)
             observation = self._summarize_semantic_results(results)
             evidence_risks, evidence_map = self._extract_evidence_map(results)
-            response_payload = {"query": query, "results": observation}
+
+            prompt_payload.update({"query": query, "k": k})
+            response_payload = {
+                "query": query,
+                "result_count": len(results),
+                "results": observation,
+                "evidence_risks": evidence_risks,
+                "evidence_map": evidence_map
+            }
             findings.append(f"Semantic Search: {len(results)} similar reports found.")
+            step_log = {
+                "module": self.arch_module_name["semantic_search"],
+                "prompt": prompt_payload,
+                "response": response_payload
+            }
 
         elif action == "structured_filter":
             filters = self._build_filters(action_input, state.get("extracted_entities", {}))
+
             if filters:
                 df_res = self.tools["filtering"].filter_data(filters)
                 df_context = df_res
-                msg_suffix = ""
                 observation = self._summarize_df(df_res)
+                msg_suffix = ""
+                used_full_dataset = False
             else:
-                # No filters: keep FULL context for downstream tools (e.g. Trend Analyzer)
-                # but only show a sample in the observation to the LLM.
                 df_res = self.tools["filtering"].df
                 df_context = df_res
                 sample_df = df_res.head(100)
                 summary = self._summarize_df(sample_df)
-                # Overwrite count to be explicit about the difference
                 observation = {
                     "count": f"{len(df_res)} (full dataset)",
                     "sample_preview_count": 100,
@@ -326,31 +365,55 @@ Only return the JSON object, no additional text."""),
                     "top_operators": summary.get("top_operators", {})
                 }
                 msg_suffix = " (No filters provided. Context set to full dataset. Showing top 100 sample in observation.)"
-            
-            response_payload = {"filters": filters, "summary": observation}
+                used_full_dataset = True
+
+            prompt_payload.update({"filters": filters, "used_full_dataset": used_full_dataset})
+            response_payload = {"filters_applied": filters, "summary": observation}
             findings.append(f"Structured Filter: {len(df_res)} records available{msg_suffix}.")
+            step_log = {
+                "module": self.arch_module_name["structured_filter"],
+                "prompt": prompt_payload,
+                "response": response_payload
+            }
 
         elif action == "trend_analyzer":
             use_filtered = action_input.get("use_filtered", True)
             time_col = action_input.get("time_col", "Event_Date")
             metric_col = action_input.get("metric_col", "ACN")
             df_to_use = df_context if (use_filtered and df_context is not None) else self.tools["trend_analyzer"].df
-            observation = self.tools["trend_analyzer"].detect_anomalies(df_to_use, time_col=time_col, metric_col=metric_col)
+
+            observation = self.tools["trend_analyzer"].detect_anomalies(
+                df_to_use,
+                time_col=time_col,
+                metric_col=metric_col
+            )
+
+            prompt_payload.update({
+                "use_filtered": use_filtered,
+                "time_col": time_col,
+                "metric_col": metric_col,
+                "rows_used": int(len(df_to_use))
+            })
             response_payload = {"trend": observation}
             findings.append(f"Trend Analysis: {observation}")
+            step_log = {
+                "module": self.arch_module_name["trend_analyzer"],
+                "prompt": prompt_payload,
+                "response": response_payload
+            }
 
         elif action == "deep_analysis":
             focus = action_input.get("focus", "")
             result = self._deep_analysis(state, focus=focus)
             observation = result.get("observation", "")
             actual_prompt = result.get("actual_prompt", "")
-            
+
+            prompt_payload.update({"focus": focus, "llm_prompt": actual_prompt})
             response_payload = {"analysis": observation}
             findings.append(f"Deep Analysis: {observation}")
-
             step_log = {
-                "module": "DEEP ANALYSIS",
-                "prompt": actual_prompt,
+                "module": self.arch_module_name["deep_analysis"],
+                "prompt": prompt_payload,
                 "response": response_payload
             }
 
@@ -358,6 +421,11 @@ Only return the JSON object, no additional text."""),
             observation = f"Unknown action: {action}"
             response_payload = {"error": observation}
             findings.append(observation)
+            step_log = {
+                "module": "UNKNOWN ACTION",
+                "prompt": prompt_payload,
+                "response": response_payload
+            }
 
         tool_history.append(action)
         step_count = state.get("step_count", 0) + 1
@@ -370,18 +438,16 @@ Only return the JSON object, no additional text."""),
             "observation": observation
         }
 
-        steps_trace_update = [step_log] if step_log else []
-
         return {
             "findings": findings,
             "react_steps": [react_step],
-            "steps_trace": steps_trace_update,
+            "steps_trace": [step_log] if step_log else [],
             "tool_history": tool_history,
             "df_context": df_context,
             "step_count": step_count,
             "last_observation": observation,
-            "evidence_risks": evidence_risks if action == "semantic_search" else state.get("evidence_risks", []),
-            "evidence_map": evidence_map if action == "semantic_search" else state.get("evidence_map", {})
+            "evidence_risks": evidence_risks,
+            "evidence_map": evidence_map
         }
 
     def _deep_analysis(self, state: AgentState, focus: str = "") -> Dict[str, str]:

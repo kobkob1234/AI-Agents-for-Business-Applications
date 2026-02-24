@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict, Generator
 import os
@@ -46,14 +47,126 @@ app.mount("/static", StaticFiles(directory="src/static", html=True), name="stati
 # We initialize it once on startup
 agent = None
 
+def _is_strict_mode() -> bool:
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    strict_flag = os.getenv("REQUIRE_STRICT_STACK", "").strip().lower()
+    return app_env in {"prod", "production"} or strict_flag in {"1", "true", "yes"}
+
+def _error_payload(message: str) -> Dict[str, Any]:
+    return {
+        "status": "error",
+        "error": message,
+        "response": None,
+        "steps": []
+    }
+
+def _format_validation_error(exc: RequestValidationError) -> str:
+    errors = exc.errors()
+    if not errors:
+        return "Invalid request payload"
+    first = errors[0]
+    loc = ".".join(str(x) for x in first.get("loc", []))
+    msg = first.get("msg", "Invalid request payload")
+    return f"{loc}: {msg}" if loc else msg
+
+def _is_execute_request(request: Request) -> bool:
+    return request.url.path == "/api/execute"
+
+def _validate_required_integrations() -> None:
+    if not _is_strict_mode():
+        return
+
+    required_env = ["OPENAI_API_KEY", "OPENAI_BASE_URL", "SUPABASE_URL", "SUPABASE_KEY", "PINECONE_API_KEY"]
+    missing = [k for k in required_env if not os.getenv(k)]
+    if missing:
+        raise RuntimeError(f"Strict mode: missing required env vars: {', '.join(missing)}")
+
+    if "llmod.ai" not in os.getenv("OPENAI_BASE_URL", ""):
+        raise RuntimeError("Strict mode: OPENAI_BASE_URL must point to LLMod.ai")
+
+    from src.utils.supabase_manager import supabase_manager
+    if not supabase_manager.is_connected():
+        raise RuntimeError("Strict mode: Supabase must be connected")
+
+    from src.tools.vector_store_manager import HAS_PINECONE
+    if not HAS_PINECONE:
+        raise RuntimeError("Strict mode: Pinecone SDK is required")
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    if _is_execute_request(request):
+        return JSONResponse(
+            status_code=200,
+            content=_error_payload(f"Invalid request payload: {_format_validation_error(exc)}")
+        )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    if _is_execute_request(request):
+        return JSONResponse(
+            status_code=200,
+            content=_error_payload(str(exc.detail))
+        )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    if _is_execute_request(request):
+        return JSONResponse(
+            status_code=200,
+            content=_error_payload(f"Unexpected server error: {str(exc)}")
+        )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
 @app.on_event("startup")
 async def startup_event():
     global agent
     try:
+        _validate_required_integrations()
         agent = ASIAgent()
         print("ASI Agent Initialized.")
     except Exception as e:
+        agent = None
         print(f"Failed to initialize agent: {e}")
+
+@app.get("/api/runtime_diagnostics")
+async def runtime_diagnostics():
+    from src.utils.supabase_manager import supabase_manager
+    from src.tools.vector_store_manager import HAS_PINECONE
+
+    base_url = os.getenv("OPENAI_BASE_URL", "")
+    llm_provider = "llmod.ai" if "llmod.ai" in base_url else "non-llmod"
+
+    vector_backend = None
+    if agent is not None:
+        try:
+            vector_backend = type(agent.semantic_search.vectorstore).__name__
+        except Exception:
+            vector_backend = "unknown"
+
+    return {
+        "app_env": os.getenv("APP_ENV", "development"),
+        "strict_mode": _is_strict_mode(),
+        "llm": {
+            "provider_detected": llm_provider,
+            "base_url": base_url,
+            "api_key_present": bool(os.getenv("OPENAI_API_KEY"))
+        },
+        "supabase": {
+            "url_present": bool(os.getenv("SUPABASE_URL")),
+            "key_present": bool(os.getenv("SUPABASE_KEY")),
+            "connected": supabase_manager.is_connected()
+        },
+        "pinecone": {
+            "api_key_present": bool(os.getenv("PINECONE_API_KEY")),
+            "sdk_available": HAS_PINECONE
+        },
+        "runtime": {
+            "agent_initialized": agent is not None,
+            "vector_backend": vector_backend
+        }
+    }
 
 # --- Endpoints ---
 
@@ -88,12 +201,63 @@ async def agent_info():
         "prompt_examples": [
             {
                 "prompt": "Location: SAN. Airplane: B737 MAX 8. Event: Descent. Narrative: Experiencing unstable approach and high sink rate due to wake turbulence from preceding A321.",
-                "full_response": "## Executive Summary\nThe reported incident involved a B737 MAX 8 experiencing unstable approach conditions at SAN during descent phase. The primary contributing factor appears to be wake turbulence from a preceding A321 aircraft.\n\n## Historical Corroboration\nSemantic search of the ASRS database identified 5 similar cases involving wake turbulence encounters during approach phase.\n\n## Trend Analysis\nAnalysis indicates stable reporting patterns for wake turbulence incidents, with mean monthly reports around 12-15 for B737 aircraft.\n\n## Cross-Reference Findings\nFiltered data shows 23 similar reports for B737 aircraft at SAN. Most common operator: Southwest Airlines.\n\n## Root Cause Assessment\nInsufficient separation from preceding heavier aircraft during approach phase.\n\n## Recommendations\n1. Review wake turbulence separation standards\n2. Enhance pilot awareness training for wake vortex encounters",
+                "full_response": "## Executive Summary\n...\n## Recommendations\n1. ...\n2. ...",
                 "steps": [
-                    { "module": "ENTITY EXTRACTION", "prompt": "Extract key entities from the report...", "response": "Captured: B737 MAX 8, SAN, Descent" },
-                    { "module": "REACT DECIDER", "prompt": "Decide next action based on findings...", "response": "Action: deep_analysis" },
-                    { "module": "DEEP ANALYSIS", "prompt": "LLM causal analysis prompt...", "response": "Confirmed recurrent issue" },
-                    { "module": "SYNTHESIZER", "prompt": "Synthesize findings...", "response": "Generated RCA Report" }
+                    {
+                        "module": "ENTITY EXTRACTION",
+                        "prompt": {"task": "extract_entities"},
+                        "response": {"Aircraft Model": "B737 MAX 8", "Location": "SAN", "Event Type": "Wake Turbulence", "Flight Phase": "Descent"}
+                    },
+                    {
+                        "module": "REACT DECIDER",
+                        "prompt": {"task": "decide_next_action"},
+                        "response": {"decision": "act", "action": "semantic_search"}
+                    },
+                    {
+                        "module": "SEMANTIC SEARCH",
+                        "prompt": {"query": "B737 MAX 8 wake turbulence SAN descent", "k": 5},
+                        "response": {"result_count": 5}
+                    },
+                    {
+                        "module": "REACT DECIDER",
+                        "prompt": {"task": "decide_next_action"},
+                        "response": {"decision": "act", "action": "structured_filter"}
+                    },
+                    {
+                        "module": "STRUCTURED FILTER",
+                        "prompt": {"Make_Model": "B737 MAX 8", "Airport": "SAN"},
+                        "response": {"count": 23}
+                    },
+                    {
+                        "module": "REACT DECIDER",
+                        "prompt": {"task": "decide_next_action"},
+                        "response": {"decision": "act", "action": "trend_analyzer"}
+                    },
+                    {
+                        "module": "TREND ANALYZER",
+                        "prompt": {"use_filtered": True, "time_col": "Event_Date", "metric_col": "ACN"},
+                        "response": {"status": "analyzed"}
+                    },
+                    {
+                        "module": "REACT DECIDER",
+                        "prompt": {"task": "decide_next_action"},
+                        "response": {"decision": "act", "action": "deep_analysis"}
+                    },
+                    {
+                        "module": "DEEP ANALYSIS",
+                        "prompt": {"focus": "Root causes from collected evidence"},
+                        "response": {"analysis": "Likely wake encounter with contributing sequencing factors."}
+                    },
+                    {
+                        "module": "REACT DECIDER",
+                        "prompt": {"task": "decide_next_action"},
+                        "response": {"decision": "final"}
+                    },
+                    {
+                        "module": "SYNTHESIZER",
+                        "prompt": {"task": "compose_final_rca"},
+                        "response": {"report": "Final RCA report..."}
+                    }
                 ]
             }
         ]
