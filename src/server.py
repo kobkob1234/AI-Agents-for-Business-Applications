@@ -217,8 +217,76 @@ async def agent_info():
         },
         "prompt_examples": [
             {
-                "prompt": "Location: SAN. Airplane: B737 MAX 8. Event: Descent. Narrative: Experiencing unstable approach and high sink rate due to wake turbulence from preceding A321.",
-                "full_response": "## Executive Summary\n...\n## Recommendations\n1. ...\n2. ...",
+                "prompt": "Location: SAN. Airplane: B737 MAX 8. Event: Descent.\n\nNarrative: During approach to runway 27, we experienced unstable approach conditions with high sink rate. The preceding aircraft was an A321. We encountered significant wake turbulence approximately 3 miles from the runway threshold. Aircraft required go-around due to inability to stabilize before decision height.",
+                "full_response": """## Executive Summary
+During an approach to SAN Runway 27 in a B737 MAX 8 the flight crew encountered significant wake turbulence from a preceding A321 at roughly 3 nm from the threshold. The wake-induced high sink rate led to an unstable approach and a go-around. Primary finding: wake turbulence encounter combined with close arrival sequencing/ATC flow produced an unstabilized final segment requiring a missed approach.
+
+Supporting evidence (ASRS ACNs): wake-turbulence and unstable-approach events appear in the ASRS records identified for similar scenarios (notably ACNs 2294909, 2176230, 2037409, 1659088, 1527855, 1684068, 1854226, 1924227, 861861). Note: a structured ASRS filter for B737 MAX 8 at SAN returned 0 records, so direct historical records for this exact make-model/location are not available in the structured query - corroboration relies on semantically similar reports (ACNs above).
+
+## Historical Corroboration
+Semantically similar ASRS narratives show consistent patterns:
+- Wake-turbulence encounters on final leading to unstable approaches and go-arounds: ACNs 2176230, 1924227, 1527855, 2294909, 861861.
+- Close ATC sequencing or inadequate spacing cited as causal/enabling factors: ACNs 1684068, 1659088, 1854226, 1527855, 2037409.
+- Several reports involve approaches to Runway 27 or similar SAN procedures: ACNs 2037409, 2294909.
+
+Relevant ACNs by observed signatures:
+- Wake Turbulence (directly relevant): 1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909, 861861.
+- Examples with unstable approach/go-around after wake encounter: 2176230, 1924227, 1527855, 2294909.
+
+## Trend Analysis
+- Dataset size / detection: semantic search returned 9 distinct ACNs that match the wake-turbulence -> unstable approach -> go-around pattern.
+- Category co-occurrence:
+  - All nine ACNs appear in the Wake Turbulence category.
+  - Many of these ACNs also appear under Runway Configuration / ATC Flow and Adverse Weather / Crosswinds / Visibility categories, indicating frequent multi-factor contributions (see Evidence Map lists).
+- Anomaly: structured filtering for this exact make/model/location (B737 MAX 8 at SAN) yielded zero structured records - suggesting either under-reporting or that most comparable records are semantically similar but not indexed under that exact structured query.
+- Summary pattern: wake turbulence on final, often when following larger or similar-category aircraft and during close sequencing, is a recurring precursor to unstable approaches and go-arounds in the identified ACNs (1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909, 861861).
+
+## Cross-Reference Findings
+(Using only the provided evidence categories and ACNs)
+
+- Wake Turbulence <-> Runway Configuration / ATC Flow:
+  - Overlap ACNs: 1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909. These reports indicate ATC sequencing/spacing and runway/flow choices commonly co-occur with wake encounters.
+- Wake Turbulence <-> Adverse Weather / Crosswinds / Visibility:
+  - Overlap ACNs: 1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909, 861861. Many events flagged both wake turbulence and weather/crosswind considerations.
+- Wake Turbulence <-> Airspace Congestion / VFR Conflicts:
+  - Overlap ACNs: 1527855, 1659088, 1684068, 1854226, 2037409, 2176230, 2294909, 861861. Congestion/sequencing pressures are recurring themes.
+- Runway Contamination / Braking Action:
+  - Fewer overlaps (1527855, 1659088, 2037409, 2294909); not a primary driver in the present narrative but appears in some historical records.
+
+Limitations: Evidence provided does not contain operator, maintenance, or organizational-specific identifiers beyond the ACNs and category mappings; therefore there is insufficient evidence to assert maintenance or operator procedural failures. Cross-references are limited to category-ACN intersections only.
+
+## Root Cause Assessment
+Primary Root Cause
+- Wake turbulence encounter from preceding aircraft (A321) on short/close final producing an abrupt sink-rate and roll/instability that made the approach unstabilized (supported by Wake Turbulence ACNs: 1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909, 861861).
+
+Contributing Causes
+- ATC sequencing / runway configuration (inadequate spacing or sequencing that placed the B737 MAX 8 on final within hazardous wake vortex proximity of the A321): supported by overlapping ACNs in Runway Configuration / ATC Flow (1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909).
+- Airspace congestion / operational pressure (traffic density, VFR conflicts or flow compression increasing the likelihood of close-follow situations): supported by ACNs listed under Airspace Congestion / VFR Conflicts (1527855, 1659088, 1684068, 1854226, 2037409, 2176230, 2294909, 861861).
+- Environmental factors (wind/crosswind/visibility can exacerbate wake effects and recovery workload): supported by ACNs in Adverse Weather / Crosswinds / Visibility (1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909, 861861).
+- Insufficient model-and-location specific historical data: Structured query returned zero B737 MAX 8 @ SAN records (limitation), reducing ability to determine if MAX-8 responses differ materially from other types in SAN approaches.
+
+## Recommendations
+(Each recommendation is tied to evidence categories/ACNs that support it)
+
+1. Reinforce ATC wake-separation and sequencing practices for final approach to Runway 27 (Runway Configuration / ATC Flow; Wake Turbulence).
+   - Action: Review local arrival/sequencing logic and apply increased spacing or vectoring for aircraft following A321/large types where wake vortices are likely (supported ACNs: 1527855, 1684068, 1854226, 2037409, 2294909).
+2. Issue explicit wake-turbulence advisories to crews when an A321 or heavier traffic is on short final (Wake Turbulence; Airspace Congestion).
+   - Action: ATC phraseology protocols to include short-final wake advisories and suggested spacing when preceding traffic is known to generate significant wake (ACNs: 2176230, 2294909, 861861).
+3. Emphasize stabilized-approach criteria and decision-height adherence in operator SOPs and simulator training (Wake Turbulence; Adverse Weather).
+   - Action: Recurrent training scenarios on low-altitude wake encounters and mandatory go-around decision timelines; reinforce that a go-around is the appropriate response to approach destabilization (ACNs: 1527855, 2176230, 1924227).
+4. Increase crew briefing emphasis on anticipated wake turbulence when following similar or larger aircraft on final (Airspace Congestion; Wake Turbulence).
+   - Action: Include explicit brief items: preceding-type, expected vortex behavior, go-around criteria and PF/PM roles during wake encounter recovery (ACNs: 1659088, 1684068, 2037409).
+5. Monitor and, if indicated, adjust final approach tracks or intercept points to mitigate vortex encounter in known problem sectors (Runway Configuration / ATC Flow; Wake Turbulence).
+   - Action: Conduct local arrival-path risk assessment for Runway 27 using recorded incidents (ACNs: 2037409, 2294909).
+6. Improve reporting granularity and local capture of make-model/location incidents (data collection) to close the evidence gap for B737 MAX 8 at SAN.
+   - Action: Encourage structured ASRS reporting fields to capture exact make/model and airport to allow trend detection and targeted mitigations (limitation noted: structured query returned 0 records for B737 MAX 8 at SAN).
+7. Where environmental factors are present (crosswinds/turbulence), consider conservative minima or sequencing adjustments (Adverse Weather / Crosswinds / Visibility).
+   - Action: Issue operational guidance to increase spacing or alter approach configurations under adverse weather flags (ACNs: 1527855, 1659088, 2037409).
+
+Limitations and further work
+- The structured ASRS filter returned no direct B737 MAX 8 at SAN records; conclusions rely on semantically similar ACNs. There is insufficient evidence to attribute operator, maintenance, or organizational causal factors beyond the categories and ACNs provided. Further targeted data collection at SAN (flight data, ATC tapes, precise spacing records) and structured ASRS entries for B737 MAX 8 events would improve root-cause specificity.
+
+Prepared from provided evidence categories and ACNs only: Wake Turbulence; Runway Configuration / ATC Flow; Adverse Weather / Crosswinds / Visibility; Airspace Congestion / VFR Conflicts; Runway Contamination / Braking Action (as applicable) and ACNs: 1527855, 1659088, 1684068, 1854226, 1924227, 2037409, 2176230, 2294909, 861861.""",
                 "steps": [
                     {
                         "module": "ENTITY EXTRACTION",
