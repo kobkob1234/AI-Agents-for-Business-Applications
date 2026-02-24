@@ -2,7 +2,12 @@ import pandas as pd
 import os
 import glob
 from src.utils.columns import COLUMN_NAMES
-from src.utils.supabase_manager import HAS_SUPABASE, create_client, Client
+
+try:
+    from supabase import create_client, Client
+    HAS_SUPABASE = True
+except ImportError:
+    HAS_SUPABASE = False
 
 def _is_strict_mode() -> bool:
     app_env = os.getenv("APP_ENV", "").strip().lower()

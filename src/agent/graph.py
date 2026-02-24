@@ -154,9 +154,9 @@ class ASIAgent:
 
                         module_name_map = {
                             "semantic_search": "SEMANTIC SEARCH",
-                            "filtering": "STRUCTURED FILTER",
+                            "structured_filter": "STRUCTURED FILTER",
                             "trend_analyzer": "TREND ANALYZER",
-                            "deep_analysis": "DEEP ANALYSIS" # Assuming this might be added later
+                            "deep_analysis": "DEEP ANALYSIS"
                         }
                         module_label = module_name_map.get(action, f"TOOL: {action}")
 
