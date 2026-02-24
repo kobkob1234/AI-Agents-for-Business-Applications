@@ -33,13 +33,15 @@ class StructuredFilter:
                 # Support both 'Make Model Name' and 'make_model_name'
                 col = self._get_column(result, 'Make Model Name', 'make_model_name', 'Make_Model_Name')
                 if col in result.columns:
-                    result = result[result[col].astype(str).str.contains(value, case=False, na=False)]
+                    # Enable literal matching by setting regex=False
+                    result = result[result[col].astype(str).str.contains(value, case=False, na=False, regex=False)]
                 
             elif key == 'Airport':
                 # Support both 'Locale Reference' and 'locale_reference'
                 col = self._get_column(result, 'Locale Reference', 'locale_reference', 'Locale_Reference')
                 if col in result.columns:
-                    result = result[result[col].astype(str).str.contains(value, case=False, na=False)]
+                    # Enable literal matching by setting regex=False
+                    result = result[result[col].astype(str).str.contains(value, case=False, na=False, regex=False)]
                 
             elif key == 'Date_Start':
                 if 'Event_Date' in result.columns:

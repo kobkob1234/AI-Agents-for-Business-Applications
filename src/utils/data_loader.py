@@ -43,6 +43,19 @@ def load_data(data_dir: str = "data") -> pd.DataFrame:
                 print(f"✅ Successfully loaded {len(all_rows)} records from Supabase.")
                 df = pd.DataFrame(all_rows)
                 # Ensure columns match expected schema if needed
+                # Rename columns to match internal schema (Supabase -> Internal)
+                column_mapping = {
+                    "aircraft_make_model": "Make Model Name",
+                    "location": "Locale Reference",
+                    "event_date": "Event_Date"
+                }
+                df = df.rename(columns=column_mapping)
+                
+                # Check for any missing columns and warn
+                missing_cols = [v for k, v in column_mapping.items() if v not in df.columns]
+                if missing_cols:
+                     print(f"⚠️ Warning: Some expected columns missing after mapping: {missing_cols}")
+
                 return df
             else:
                  print("⚠️ Supabase table 'asrs_reports' empty or not found. Falling back to local CSVs.")
