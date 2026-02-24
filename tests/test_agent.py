@@ -13,7 +13,7 @@ def test_execute_response_strictness():
         "error": None,
         "response": "Test response",
         "steps": [
-            {"module": "Test", "prompt": "p", "response": "r"}
+            {"module": "Test", "prompt": {"input": "p"}, "response": {"output": "r"}}
         ]
     }
     model = ExecuteResponse(**valid_data)

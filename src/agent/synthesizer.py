@@ -81,14 +81,17 @@ If evidence is insufficient, say so."""),
         try:
             system_msg = prompt.messages[0].prompt.template
             user_msg = f"Input Report: {report_input}\n\nExtracted Entities: {entities_safe}\n\nEvidence Categories: {state.get('evidence_risks', [])}\n\nEvidence Map (risk -> ACNs): {state.get('evidence_map', {})}\n\nReAct Trace (reasoning summaries + observations): {state.get('react_steps', [])}\n\nTool Findings: {state['findings']}"
-            full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
+            prompt_payload = {
+                "system": system_msg,
+                "user": user_msg
+            }
         except (AttributeError, IndexError):
-            full_prompt = "Prompt formatting failed."
+            prompt_payload = {"error": "Prompt formatting failed."}
 
         step_log = {
             "module": "SYNTHESIZER",
-            "prompt": full_prompt,
-            "response": report
+            "prompt": prompt_payload,
+            "response": {"report": report}
         }
 
         return {"final_report": report, "steps_trace": [step_log]}

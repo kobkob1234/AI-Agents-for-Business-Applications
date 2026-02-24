@@ -4,8 +4,8 @@ from langchain_core.messages import BaseMessage
 
 class StepLog(TypedDict):
     module: str
-    prompt: Any
-    response: Any
+    prompt: Dict[str, Any]
+    response: Dict[str, Any]
 
 class ReActStep(TypedDict):
     step: int

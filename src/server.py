@@ -15,8 +15,8 @@ class ExecuteInput(BaseModel):
 
 class Step(BaseModel):
     module: str
-    prompt: Any
-    response: Any
+    prompt: Dict[str, Any]
+    response: Dict[str, Any]
 
 class ExecuteResponse(BaseModel):
     status: str
@@ -73,6 +73,41 @@ def _error_payload(message: str) -> Dict[str, Any]:
         "response": None,
         "steps": []
     }
+
+def _ensure_step_object(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if value is None:
+        return {}
+    if isinstance(value, (list, tuple, set)):
+        return {"items": list(value)}
+    return {"value": value}
+
+def _normalize_steps(steps: Any) -> List[Dict[str, Any]]:
+    if not isinstance(steps, list):
+        return []
+
+    normalized: List[Dict[str, Any]] = []
+    for i, step in enumerate(steps):
+        if not isinstance(step, dict):
+            normalized.append({
+                "module": f"STEP_{i + 1}",
+                "prompt": {"value": "Invalid step shape"},
+                "response": {"value": step}
+            })
+            continue
+
+        module = step.get("module", f"STEP_{i + 1}")
+        if not isinstance(module, str):
+            module = str(module)
+
+        normalized.append({
+            "module": module,
+            "prompt": _ensure_step_object(step.get("prompt")),
+            "response": _ensure_step_object(step.get("response"))
+        })
+
+    return normalized
 
 def _format_validation_error(exc: RequestValidationError) -> str:
     errors = exc.errors()
@@ -396,7 +431,7 @@ def execute(input_data: ExecuteInput):
         
         # Extract steps
         # steps_trace was added to AgentState in state.py
-        steps = final_state.get("steps_trace", [])
+        steps = _normalize_steps(final_state.get("steps_trace", []))
         entities = final_state.get("extracted_entities", {})
         
         # Calculate execution time
@@ -474,7 +509,7 @@ async def execute_stream(input_data: ExecuteInput):
                 supabase_manager.log_execution(
                     prompt=input_data.prompt,
                     entities=final_payload.get("entities", {}),
-                    steps=final_payload.get("steps", []),
+                    steps=_normalize_steps(final_payload.get("steps", [])),
                     final_report=final_payload.get("response"),
                     execution_time_ms=execution_time_ms,
                     status="completed"

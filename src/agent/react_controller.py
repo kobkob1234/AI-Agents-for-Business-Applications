@@ -322,13 +322,19 @@ Only return the JSON object, no additional text."""),
         try:
             system_msg = prompt.messages[0].prompt.template
             user_msg = trimmed_report
-            full_prompt = f"System: {system_msg}\n\nUser: {user_msg}"
+            prompt_payload = {
+                "system": system_msg,
+                "user": user_msg
+            }
         except (AttributeError, IndexError):
-            full_prompt = f"Report: {trimmed_report}"
+            prompt_payload = {"report": trimmed_report}
+
+        if not isinstance(entities, dict):
+            entities = {"raw_response": str(entities)}
 
         step_log = {
             "module": "ENTITY EXTRACTION",
-            "prompt": full_prompt,
+            "prompt": prompt_payload,
             "response": entities
         }
 
