@@ -11,7 +11,6 @@ An intelligent autonomous agent designed to investigate aviation safety reports 
 *   **Semantic Search**: Retrieves similar historical incidents using **Pinecone** / **ChromaDB**.
 *   **Trend Analysis**: Detects anomaly patterns in incident frequency over time.
 *   **Execution Tracing**: Full visibility into the agent's "thought process" (steps, prompts, responses).
-*   **Premium UI**: Dark glassmorphism interface with architecture diagrams and real-time streaming.
 *   **Cloud Logging**: All executions are logged to **Supabase** for audit and playback.
 
 ## 🛠️ Tech Stack

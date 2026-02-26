@@ -12,6 +12,7 @@ env/
 # System files
 .DS_Store
 .tmp_ppt_images/
+*.log
 
 # Local databases
 chroma_db/
